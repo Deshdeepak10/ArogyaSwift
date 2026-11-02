@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+    <meta name="theme-color" content="#065F46" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>ArogyaSwift — Hyperlocal Medicine Delivery from Local Pharmacies</title>
+    <meta name="title" content="ArogyaSwift — Hyperlocal Medicine Delivery from Local Pharmacies" />
+    <meta name="description" content="Order medicines from verified neighborhood chemists with licensed pharmacist review, multi-pharmacy consolidated single-trip delivery, and secure doorstep OTP handoff." />
+    <meta name="keywords" content="ArogyaSwift, medicine delivery, pharmacy marketplace, prescription delivery, CDSCO compliant, Bengaluru chemist, online pharmacy, fast medicine delivery" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://arogyaswift.in/" />
+
+    <!-- Open Graph / Facebook Social Preview -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://arogyaswift.in/" />
+    <meta property="og:site_name" content="ArogyaSwift" />
+    <meta property="og:title" content="ArogyaSwift — Medicines from Your Neighbourhood Pharmacies" />
+    <meta property="og:description" content="Independent local chemists, reviewed by real pharmacists, delivered together in one trip with doorstep OTP verification." />
+    <meta property="og:image" content="https://arogyaswift.in/assets/social-preview.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://arogyaswift.in/" />
+    <meta name="twitter:title" content="ArogyaSwift — Safe & Fast Medicine Delivery" />
+    <meta name="twitter:description" content="Prescription verification by licensed local chemists delivered to your doorstep in one trip." />
+    <meta name="twitter:image" content="https://arogyaswift.in/assets/social-preview.svg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+
+  <body class="bg-slate-50 antialiased overflow-x-hidden">
+    <div id="root"></div>
+    <script>
+      (function() {
+        function removeLovableBadges() {
+          const selectors = [
+            '#lovable-badge',
+            '[id*="lovable"]',
+            '[class*="lovable"]',
+            'a[href*="lovable.dev"]',
+            'a[href*="lovable.app"]'
+          ];
+          selectors.forEach(function(sel) {
+            document.querySelectorAll(sel).forEach(function(el) {
+              el.remove();
+            });
+          });
+          // Also check text content for "Edit with Lovable" or "Made with Lovable"
+          document.querySelectorAll('div, button, a, span').forEach(function(el) {
+            if (el.childNodes.length <= 3 && /edit with lovable|made with lovable/i.test(el.textContent || '')) {
+              el.remove();
+            }
+          });
+        }
+        removeLovableBadges();
+        const observer = new MutationObserver(removeLovableBadges);
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+
+</html>

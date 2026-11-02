@@ -1,0 +1,45 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient Background -->
+  <rect width="1200" height="630" fill="#065F46"/>
+  <circle cx="1050" cy="120" r="320" fill="#047857" fill-opacity="0.4"/>
+  <circle cx="150" cy="550" r="260" fill="#059669" fill-opacity="0.2"/>
+  
+  <!-- Subtle decorative grid elements -->
+  <rect x="80" y="80" width="1040" height="470" rx="24" stroke="#10B981" stroke-opacity="0.3" stroke-width="2" stroke-dasharray="8 8"/>
+  
+  <!-- Logo Badge -->
+  <rect x="140" y="140" width="84" height="84" rx="22" fill="#DCFCE7"/>
+  <path d="M182 160V204M160 182H204" stroke="#065F46" stroke-width="8" stroke-linecap="round"/>
+  
+  <!-- Pill Tag -->
+  <rect x="250" y="162" width="460" height="40" rx="20" fill="#047857" fill-opacity="0.8" stroke="#34D399" stroke-width="1.5"/>
+  <circle cx="274" cy="182" r="5" fill="#34D399"/>
+  <text x="292" y="187" fill="#DCFCE7" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" letter-spacing="1">CDSCO-COMPLIANT PHARMACY MARKETPLACE</text>
+  
+  <!-- Main Brand Title -->
+  <text x="140" y="300" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="68" font-weight="900" letter-spacing="-1">ArogyaSwift</text>
+  
+  <!-- Tagline -->
+  <text x="140" y="370" fill="#A7F3D0" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="600">
+    Medicines from verified neighbourhood pharmacies
+  </text>
+  <text x="140" y="420" fill="#D1FAE5" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="400">
+    Reviewed by licensed pharmacists • Multi-pharmacy consolidated delivery • Doorstep OTP
+  </text>
+
+  <!-- 4 Architecture Portals Badges -->
+  <g transform="translate(140, 470)">
+    <rect x="0" y="0" width="180" height="48" rx="12" fill="#044E39" stroke="#10B981" stroke-width="1"/>
+    <text x="90" y="30" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">1. Customer App</text>
+    
+    <rect x="200" y="0" width="180" height="48" rx="12" fill="#044E39" stroke="#10B981" stroke-width="1"/>
+    <text x="290" y="30" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">2. Pharmacy App</text>
+    
+    <rect x="400" y="0" width="180" height="48" rx="12" fill="#044E39" stroke="#10B981" stroke-width="1"/>
+    <text x="490" y="30" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">3. Rider App</text>
+    
+    <rect x="600" y="0" width="180" height="48" rx="12" fill="#044E39" stroke="#10B981" stroke-width="1"/>
+    <text x="690" y="30" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="16" font-weight="700" text-anchor="middle">4. Admin Control</text>
+  </g>
+</svg>
+

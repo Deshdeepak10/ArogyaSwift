@@ -1,0 +1,8 @@
+# Cloudflare Pages Configuration for ArogyaSwift Frontend
+name = "arogyaswift-frontend"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "./dist/public"
+
+# Environment variables for Cloudflare Pages (set in Cloudflare dashboard or here for preview)
+[vars]
+NODE_ENV = "production"
