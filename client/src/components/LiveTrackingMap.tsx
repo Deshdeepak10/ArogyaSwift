@@ -53,7 +53,7 @@ export function LiveTrackingMap({
   const [isLiveMoving, setIsLiveMoving] = useState(true);
   const [currentTemp, setCurrentTemp] = useState(coldTemp);
   const [riderSpeed, setRiderSpeed] = useState(28);
-  const [mapMode, setMapMode] = useState<"arogyaswift_tech" | "google_maps">("google_maps");
+  const [mapMode, setMapMode] = useState<"arogyaswift_tech" | "mapbox">("mapbox");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showCaptainCard, setShowCaptainCard] = useState(true);
   const [trafficCondition, setTrafficCondition] = useState<"Low" | "Moderate">("Low");
@@ -174,14 +174,25 @@ export function LiveTrackingMap({
             </button>
             <button
               type="button"
-              onClick={() => setMapMode("google_maps")}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${
-                mapMode === "google_maps"
-                  ? "bg-cyan-600 text-white shadow-md"
+              onClick={() => setMapMode("mapbox")}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                mapMode === "mapbox"
+                  ? "bg-emerald-600 text-white shadow-md font-bold"
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              <Layers className="w-3.5 h-3.5" /> Google Satellite
+              <Layers className="w-3.5 h-3.5" /> Mapbox 3D Map
+            </button>
+            <button
+              type="button"
+              onClick={() => setMapMode("arogyaswift_tech")}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                mapMode === "arogyaswift_tech"
+                  ? "bg-cyan-600 text-white shadow-md font-bold"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" /> Tech Radar
             </button>
           </div>
         </div>
@@ -189,10 +200,10 @@ export function LiveTrackingMap({
 
       {/* Main Map Rendering Area */}
       <div className="relative w-full h-[380px] bg-slate-950 overflow-hidden">
-        {mapMode === "google_maps" ? (
+        {mapMode === "mapbox" ? (
           <MapView
             initialCenter={{ lat: 28.6692, lng: 77.4538 }} // Ghaziabad Coordinates
-            initialZoom={14}
+            initialZoom={13}
             className="w-full h-full"
           />
         ) : (
