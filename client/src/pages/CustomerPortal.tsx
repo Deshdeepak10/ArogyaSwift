@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrders } from "@/contexts/OrderContext";
 import { SpamShield } from "@/components/SpamShield";
 import { trackEvent } from "@/lib/analytics";
+import Tesseract from "tesseract.js";
 import {
   Upload,
   Plus,
@@ -24,7 +25,8 @@ import {
   X,
   Sparkles,
   ZoomIn,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,6 +62,8 @@ export default function CustomerPortal() {
   const [prescriptionPreviewUrl, setPrescriptionPreviewUrl] = useState<string | null>(null);
   const [prescriptionFileSize, setPrescriptionFileSize] = useState<string | null>(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isOcrScanning, setIsOcrScanning] = useState(false);
+  const [ocrProgressText, setOcrProgressText] = useState("");
 
   // Sync state if user changes
   useEffect(() => {
@@ -138,19 +142,93 @@ export default function CustomerPortal() {
     toast.info("Prescription removed. You can enter medicine names manually.");
   };
 
-  const handleExtractMedicinesFromRx = () => {
-    if (!prescriptionFile) {
-      toast.error("Please upload a prescription first.");
+  const handleExtractMedicinesFromRx = async () => {
+    if (!prescriptionPreviewUrl && !prescriptionFile) {
+      toast.error("Please upload a prescription image first.");
       return;
     }
-    // Extract recognized medicine items from the doctor's Rx into the editable medicines list
-    const sampleExtractedMedicines: MedicineRow[] = [
-      { id: Date.now().toString() + "-1", name: "Paracetamol 650mg (Dolo 650)", quantity: "1 strip (15 tablets)" },
-      { id: Date.now().toString() + "-2", name: "Azithromycin 500mg (Azithral)", quantity: "1 strip (5 tablets)" },
-      { id: Date.now().toString() + "-3", name: "Cetirizine 10mg", quantity: "1 strip (10 tablets)" }
-    ];
-    setMedicines(sampleExtractedMedicines);
-    toast.success("Extracted 3 medicine names from prescription into your medicines list!");
+
+    if (!prescriptionPreviewUrl) {
+      toast.error("Prescription preview is not ready. Please re-select the image.");
+      return;
+    }
+
+    setIsOcrScanning(true);
+    setOcrProgressText("Scanning prescription text with OCR...");
+
+    try {
+      // Run real OCR on the uploaded image using Tesseract WebWorker
+      const result = await Tesseract.recognize(prescriptionPreviewUrl, "eng", {
+        logger: (m) => {
+          if (m.status === "recognizing text") {
+            const pct = Math.round((m.progress || 0) * 100);
+            setOcrProgressText(`Reading prescription text (${pct}%)...`);
+          } else if (m.status === "loading tesseract core") {
+            setOcrProgressText("Loading OCR recognition engine...");
+          } else if (m.status === "loading language traineddata") {
+            setOcrProgressText("Loading language models...");
+          }
+        }
+      });
+
+      const extractedRawText = result?.data?.text || "";
+
+      // Parse non-empty text lines from the actual scanned image
+      const rawLines = extractedRawText
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l.length >= 2);
+
+      const noisePatterns = [
+        /^(dr\.?|doctor|hospital|clinic|centre|center|consultant|department)/i,
+        /^(reg|regn|license|phone|tel|email|date|time|age|gender|sex|patient|name|address|rx|opd|ipd)/i,
+        /^[0-9\s/:\-]+$/,
+        /^(mbbs|md|ms|bams|bhms|dnb|frcs|pharma|signature)/i,
+        /^(signature\.jpg|signature\.png)/i
+      ];
+
+      const detectedRows: MedicineRow[] = [];
+
+      for (const line of rawLines) {
+        // Strip leading numbering or bullet points
+        const cleanLine = line.replace(/^[\d+•\-\*\.)\s]+/, "").trim();
+        if (cleanLine.length < 3) continue;
+
+        const isNoise = noisePatterns.some((pattern) => pattern.test(cleanLine));
+        if (isNoise) continue;
+
+        // Detect quantity / frequency pattern if present
+        let medName = cleanLine;
+        let medQty = "1 strip";
+
+        const qtyMatch = cleanLine.match(/(\d+\s*(?:tabs?|tablets?|caps?|capsules?|strips?|bottles?|days?|x\s*\d+))/i);
+        if (qtyMatch) {
+          medQty = qtyMatch[1];
+        }
+
+        detectedRows.push({
+          id: `ocr-${Date.now()}-${detectedRows.length + 1}`,
+          name: medName,
+          quantity: medQty
+        });
+      }
+
+      if (detectedRows.length > 0) {
+        setMedicines(detectedRows);
+        toast.success(`OCR extracted ${detectedRows.length} medicine line(s) from your prescription!`);
+      } else {
+        // Real OCR found no text or handwriting was unreadable
+        toast.info("No legible printed medicine text detected in this image. You can type names below or let the pharmacist review the Rx.");
+        setMedicines([{ id: Date.now().toString(), name: "", quantity: "1 strip" }]);
+      }
+    } catch (err: any) {
+      console.error("[OCR Scan Error]:", err);
+      toast.error("OCR scanner could not process this image format. You can type medicine names manually.");
+      setMedicines([{ id: Date.now().toString(), name: "", quantity: "1 strip" }]);
+    } finally {
+      setIsOcrScanning(false);
+      setOcrProgressText("");
+    }
   };
 
   const handleSubmitRequest = (e: React.FormEvent) => {
@@ -467,10 +545,20 @@ export default function CustomerPortal() {
                         <button
                           type="button"
                           onClick={handleExtractMedicinesFromRx}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300 rounded-lg transition-colors cursor-pointer"
+                          disabled={isOcrScanning}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300 rounded-lg transition-colors cursor-pointer disabled:opacity-60"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>Extract medicine names from prescription</span>
+                          {isOcrScanning ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 text-emerald-700 animate-spin" />
+                              <span>{ocrProgressText || "Scanning Rx..."}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                              <span>Scan Rx & extract medicine names</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -532,10 +620,20 @@ export default function CustomerPortal() {
                           <button
                             type="button"
                             onClick={handleExtractMedicinesFromRx}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 shadow-xs cursor-pointer"
+                            disabled={isOcrScanning}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 shadow-xs cursor-pointer disabled:opacity-60"
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Extract from prescription</span>
+                            {isOcrScanning ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+                                <span>{ocrProgressText || "Scanning Rx..."}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Scan & extract from Rx</span>
+                              </>
+                            )}
                           </button>
                         )}
                       </div>
