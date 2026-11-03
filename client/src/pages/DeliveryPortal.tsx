@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LovableHeader } from "@/components/LovableHeader";
 import { LovableFooter } from "@/components/LovableFooter";
 import { useOrders } from "@/contexts/OrderContext";
+import { DEMO_RIDERS, DemoRider, getRiderById } from "@/lib/demoRiders";
 import {
   Bike,
   CheckCircle2,
@@ -36,22 +37,43 @@ export default function DeliveryPortal() {
     verifyDeliveryOtp
   } = useOrders();
 
-  const [selectedRider, setSelectedRider] = useState("Ravi Kumar (shared partner)");
+  const [selectedRiderId, setSelectedRiderId] = useState<string>("all");
+  const currentRider = DEMO_RIDERS.find((r) => r.id === selectedRiderId);
+
   const [enteredOtp, setEnteredOtp] = useState<Record<string, string>>({});
   const [pickupOtpInputs, setPickupOtpInputs] = useState<Record<string, string>>({});
 
-  // 1. Pending dispatch requests waiting for rider to accept
-  const pendingRequests = orders.filter((o) => o.status === "rider_assigned");
+  // 1. Pending dispatch requests waiting for rider to accept (Connected to Pharmacy dispatch)
+  const pendingRequests = orders.filter((o) => {
+    if (o.status !== "rider_assigned") return false;
+    if (selectedRiderId === "all") return true;
+    if (o.riderId === selectedRiderId) return true;
+    if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
+    // Shared fleet riders can also claim broadcast unassigned shared runs
+    if (currentRider?.type === "shared" && o.riderType === "Shared Partner Fleet") return true;
+    return false;
+  });
 
   // 2. Active deliveries currently being handled by rider
-  const activeDeliveries = orders.filter(
-    (o) =>
+  const activeDeliveries = orders.filter((o) => {
+    const isActive =
       o.status === "collecting" ||
       o.status === "picked_up" ||
-      o.status === "out_for_delivery"
-  );
+      o.status === "out_for_delivery";
+    if (!isActive) return false;
+    if (selectedRiderId === "all") return true;
+    if (o.riderId === selectedRiderId) return true;
+    if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
+    return false;
+  });
 
-  const completedDeliveries = orders.filter((o) => o.status === "delivered");
+  const completedDeliveries = orders.filter((o) => {
+    if (o.status !== "delivered") return false;
+    if (selectedRiderId === "all") return true;
+    if (o.riderId === selectedRiderId) return true;
+    if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
+    return false;
+  });
 
   const handleMaskedCall = (patientPhone: string) => {
     toast.info(`Connecting to ${patientPhone} via masked proxy: +91 80 4719 2200`, {
@@ -60,8 +82,9 @@ export default function DeliveryPortal() {
   };
 
   const handleAccept = (orderId: string) => {
-    acceptDeliveryRun(orderId, selectedRider);
-    toast.success(`You accepted delivery run for ${orderId}! Proceed to pharmacy pickup stops.`);
+    const rider = currentRider || DEMO_RIDERS[0];
+    acceptDeliveryRun(orderId, `${rider.name} (${rider.typeLabel})`, rider.id);
+    toast.success(`Delivery run for ${orderId} accepted by ${rider.name}! Head to pharmacy pickup stops.`);
   };
 
   const handleVerifyChemistOtp = (orderId: string, stopId: string, pharmacyName: string) => {
@@ -126,13 +149,133 @@ export default function DeliveryPortal() {
           <div className="flex items-center gap-2">
             <Bike className="w-4 h-4 text-emerald-700" />
             <select
-              value={selectedRider}
-              onChange={(e) => setSelectedRider(e.target.value)}
+              value={selectedRiderId}
+              onChange={(e) => setSelectedRiderId(e.target.value)}
               className="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white shadow-xs focus:outline-emerald-600 cursor-pointer"
             >
-              <option value="Ravi Kumar (shared partner)">Ravi Kumar (shared partner)</option>
-              <option value="Ramu (Shree Ganesh in-house rider)">Ramu (Shree Ganesh in-house rider)</option>
+              <option value="all">🌐 All Fleet Riders (Dispatcher Mode)</option>
+              <optgroup label="Shree Ganesh In-House Store Riders">
+                {DEMO_RIDERS.filter((r) => r.type === "in_house").map((r) => (
+                  <option key={r.id} value={r.id}>
+                    🚲 {r.name} • In-House Store Rider ({r.vehicle})
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="ArogyaSwift Shared Partner Fleet">
+                {DEMO_RIDERS.filter((r) => r.type === "shared").map((r) => (
+                  <option key={r.id} value={r.id}>
+                    🛵 {r.name} • {r.typeLabel} ({r.rating})
+                  </option>
+                ))}
+              </optgroup>
             </select>
+          </div>
+        </div>
+
+        {/* Connected Rider Profile & Live Status Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-xl shrink-0 shadow-2xs">
+                {currentRider ? currentRider.name[0] : "🛵"}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-extrabold text-base text-slate-900">
+                    {currentRider ? currentRider.name : "All Fleet Delivery View"}
+                  </h3>
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                    Connected with Pharmacy Dispatch
+                  </span>
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                  {currentRider ? (
+                    <>
+                      <span className="font-semibold text-slate-700">{currentRider.typeLabel}</span>
+                      <span>•</span>
+                      <span>{currentRider.vehicle}</span>
+                      <span>•</span>
+                      <span className="font-mono text-slate-600">{currentRider.phone}</span>
+                      <span>•</span>
+                      <span className="text-emerald-700 font-semibold">{currentRider.status}</span>
+                    </>
+                  ) : (
+                    <span>Connected live to Shree Ganesh Medicals. Select a rider below to view specific runs or dispatch overview.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Rider Switcher Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <button
+                type="button"
+                onClick={() => setSelectedRiderId("all")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  selectedRiderId === "all"
+                    ? "bg-slate-900 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                All Fleet ({orders.filter((o) => o.status === "rider_assigned" || o.status === "collecting" || o.status === "picked_up" || o.status === "out_for_delivery").length})
+              </button>
+              {DEMO_RIDERS.map((rider) => {
+                const riderActiveCount = orders.filter(
+                  (o) =>
+                    (o.riderId === rider.id ||
+                      (o.riderName && o.riderName.toLowerCase().includes(rider.name.toLowerCase()))) &&
+                    o.status !== "delivered" &&
+                    o.status !== "in_review" &&
+                    o.status !== "quoted" &&
+                    o.status !== "order_confirmed" &&
+                    o.status !== "rejected" &&
+                    o.status !== "cancelled"
+                ).length;
+
+                return (
+                  <button
+                    key={rider.id}
+                    type="button"
+                    onClick={() => setSelectedRiderId(rider.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      selectedRiderId === rider.id
+                        ? "bg-[#065F46] text-white shadow-xs"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <span>{rider.name}</span>
+                    {riderActiveCount > 0 && (
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
+                        selectedRiderId === rider.id ? "bg-white text-emerald-900" : "bg-emerald-600 text-white"
+                      }`}>
+                        {riderActiveCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Shift Counters */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100 text-xs">
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Pending Requests</div>
+              <div className="text-lg font-extrabold text-slate-900 mt-0.5">{pendingRequests.length}</div>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Active Delivery Runs</div>
+              <div className="text-lg font-extrabold text-emerald-700 mt-0.5">{activeDeliveries.length}</div>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Delivered Orders</div>
+              <div className="text-lg font-extrabold text-slate-900 mt-0.5">{completedDeliveries.length}</div>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div className="text-[10px] uppercase font-bold text-slate-400">Today's Earnings</div>
+              <div className="text-lg font-extrabold text-[#065F46] mt-0.5">₹{completedDeliveries.length * 45}</div>
+            </div>
           </div>
         </div>
 
@@ -142,7 +285,7 @@ export default function DeliveryPortal() {
             <h2 className="text-base font-bold text-slate-900 tracking-tight">
               New requests ({pendingRequests.length})
             </h2>
-            <span className="text-xs text-slate-400">Live order broadcast</span>
+            <span className="text-xs text-slate-400">Live order broadcast from pharmacies</span>
           </div>
 
           {pendingRequests.length > 0 ? (
@@ -154,11 +297,16 @@ export default function DeliveryPortal() {
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-extrabold text-slate-900 text-base">{req.id}</span>
                         <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                           {req.pickupStops.length} pickup stop(s)
                         </span>
+                        {req.riderName && (
+                          <span className="text-[11px] font-bold text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                            🎯 Dispatched for {req.riderName}
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-slate-500 mt-1">
                         Drop: {req.patientName} · {req.area}
@@ -187,7 +335,11 @@ export default function DeliveryPortal() {
                     className="w-full py-2.5 rounded-lg bg-[#065F46] hover:bg-[#044E39] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Package className="w-4 h-4" />
-                    <span>Accept delivery run</span>
+                    <span>
+                      {currentRider
+                        ? `Accept delivery run as ${currentRider.name}`
+                        : "Accept delivery run"}
+                    </span>
                   </button>
                 </div>
               ))}
@@ -218,11 +370,16 @@ export default function DeliveryPortal() {
                     {/* Header info */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-extrabold text-slate-900 text-lg">{delivery.id}</span>
                           <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             {delivery.pickupStops.length} pickup{delivery.pickupStops.length === 1 ? "" : "s"}
                           </span>
+                          {delivery.riderName && (
+                            <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                              Assigned Rider: {delivery.riderName}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500 mt-1">
                           {delivery.area} circuit · Sealed medicine parcels (Names hidden for privacy)

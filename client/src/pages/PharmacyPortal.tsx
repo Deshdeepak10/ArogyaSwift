@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LovableHeader } from "@/components/LovableHeader";
 import { LovableFooter } from "@/components/LovableFooter";
 import { useOrders, OrderItem } from "@/contexts/OrderContext";
+import { DEMO_RIDERS, DemoRider } from "@/lib/demoRiders";
 import {
   FileText,
   CheckCircle2,
@@ -33,14 +34,10 @@ export default function PharmacyPortal() {
   // In-memory price edit buffers for incoming orders
   const [priceBuffers, setPriceBuffers] = useState<Record<string, Record<string, { inStock: boolean; price: number }>>>({});
 
-  // Store Riders (Option A)
-  const storeRiders = [
-    { id: "r1", name: "Ramu", status: "Available at shop" },
-    { id: "r2", name: "Kiran", status: "Available at shop" }
-  ];
-
-  // Shared Partners (Option B)
-  const [selectedSharedPartner, setSelectedSharedPartner] = useState("Ravi Kumar (Ekart · 2 mins away · 4.9★)");
+  // Connected Demo Riders (Single Source of Truth)
+  const storeRiders = DEMO_RIDERS.filter((r) => r.type === "in_house");
+  const sharedPartners = DEMO_RIDERS.filter((r) => r.type === "shared");
+  const [selectedSharedPartnerId, setSelectedSharedPartnerId] = useState<string>("rider-ravi");
 
   // Filter orders for Pharmacy views
   const incomingRequests = orders.filter((o) => o.status === "in_review");
@@ -107,15 +104,27 @@ export default function PharmacyPortal() {
     toast.info(`Request ${orderId} marked as rejected / out of stock.`);
   };
 
-  const handleDispatchOwnRider = (orderId: string, riderName: string) => {
-    assignRider(orderId, "own", `${riderName} (Store In-House Rider)`);
-    toast.success(`Dispatched ${orderId} with store rider ${riderName}! Pushed to delivery fleet.`);
+  const handleDispatchOwnRider = (orderId: string, rider: DemoRider) => {
+    assignRider(
+      orderId,
+      "own",
+      `${rider.name} (Store In-House Rider)`,
+      rider.id,
+      rider.phone
+    );
+    toast.success(`Dispatched ${orderId} with in-house rider ${rider.name}! Directly connected to Delivery portal.`);
   };
 
   const handleRequestSharedPartner = (orderId: string) => {
-    const partnerName = selectedSharedPartner.split("(")[0].trim();
-    assignRider(orderId, "shared", `${partnerName} (Shared Courier)`);
-    toast.success(`Broadcasting dispatch for ${orderId} to shared partner network! Pushed to delivery portal.`);
+    const partner = sharedPartners.find((p) => p.id === selectedSharedPartnerId) || sharedPartners[0];
+    assignRider(
+      orderId,
+      "shared",
+      `${partner.name} (Shared Fleet)`,
+      partner.id,
+      partner.phone
+    );
+    toast.success(`Assigned ${orderId} to shared partner ${partner.name}! Directly connected to Delivery portal.`);
   };
 
   return (
@@ -415,16 +424,23 @@ export default function PharmacyPortal() {
                           {storeRiders.map((rider) => (
                             <div
                               key={rider.id}
-                              className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200 text-xs"
+                              className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200 text-xs gap-2"
                             >
-                              <div>
-                                <div className="font-bold text-slate-800">{rider.name}</div>
-                                <div className="text-[10px] text-slate-400">{rider.status}</div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                                  <span>{rider.name}</span>
+                                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-normal">
+                                    {rider.vehicle}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  {rider.status} • {rider.phone}
+                                </div>
                               </div>
                               <button
                                 type="button"
-                                onClick={() => handleDispatchOwnRider(order.id, rider.name)}
-                                className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors cursor-pointer"
+                                onClick={() => handleDispatchOwnRider(order.id, rider)}
+                                className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors cursor-pointer shrink-0"
                               >
                                 Send {rider.name}
                               </button>
@@ -445,16 +461,15 @@ export default function PharmacyPortal() {
 
                         <div className="space-y-3 pt-1">
                           <select
-                            value={selectedSharedPartner}
-                            onChange={(e) => setSelectedSharedPartner(e.target.value)}
+                            value={selectedSharedPartnerId}
+                            onChange={(e) => setSelectedSharedPartnerId(e.target.value)}
                             className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white cursor-pointer"
                           >
-                            <option value="Ravi Kumar (Ekart · 2 mins away · 4.9★)">
-                              Ravi Kumar (Ekart · 2 mins away · 4.9★)
-                            </option>
-                            <option value="Sunil Das (Dunzo fleet · 4 mins away · 4.8★)">
-                              Sunil Das (Dunzo fleet · 4 mins away · 4.8★)
-                            </option>
+                            {sharedPartners.map((partner) => (
+                              <option key={partner.id} value={partner.id}>
+                                {partner.name} ({partner.vehicle} · {partner.eta} · {partner.rating})
+                              </option>
+                            ))}
                           </select>
 
                           <button

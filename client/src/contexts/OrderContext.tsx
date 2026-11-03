@@ -51,6 +51,8 @@ export interface PlatformOrder {
   statusLabel: string;
   riderName?: string;
   riderType?: string;
+  riderId?: string;
+  riderPhone?: string;
   currentStepIndex: number;
   pickupStops: PickupStop[];
 }
@@ -78,7 +80,8 @@ const INITIAL_ORDERS: PlatformOrder[] = [
     pickupOtp: "5823",
     status: "collecting",
     statusLabel: "Collecting from pharmacies",
-    riderName: "Ravi Kumar (shared)",
+    riderId: "rider-ravi",
+    riderName: "Ravi Kumar (Ekart)",
     riderType: "ArogyaSwift Shared Partner",
     currentStepIndex: 1,
     pickupStops: [
@@ -158,7 +161,8 @@ const INITIAL_ORDERS: PlatformOrder[] = [
     pickupOtp: "8821",
     status: "delivered",
     statusLabel: "Delivered",
-    riderName: "Suresh Gowda (in-house)",
+    riderId: "rider-ramu",
+    riderName: "Ramu (Store In-House Rider)",
     riderType: "Store Own Rider",
     currentStepIndex: 4,
     pickupStops: [
@@ -261,7 +265,8 @@ const INITIAL_ORDERS: PlatformOrder[] = [
     pickupOtp: "4612",
     status: "out_for_delivery",
     statusLabel: "Collecting from store",
-    riderName: "Ravi Kumar (shared)",
+    riderId: "rider-sunil",
+    riderName: "Sunil Das (Dunzo Fleet)",
     riderType: "ArogyaSwift Shared Partner",
     currentStepIndex: 3,
     pickupStops: [
@@ -292,8 +297,14 @@ interface OrderContextType {
   confirmPatientOrder: (orderId: string, paymentMethod?: "ONLINE" | "COD") => void;
   declinePatientQuote: (orderId: string, reason?: string) => void;
   rejectPharmacyRequest: (orderId: string) => void;
-  assignRider: (orderId: string, riderType: "own" | "shared", riderName: string) => void;
-  acceptDeliveryRun: (orderId: string, riderName: string) => void;
+  assignRider: (
+    orderId: string,
+    riderType: "own" | "shared",
+    riderName: string,
+    riderId?: string,
+    riderPhone?: string
+  ) => void;
+  acceptDeliveryRun: (orderId: string, riderName: string, riderId?: string) => void;
   togglePickupStop: (orderId: string, stopId: string) => void;
   verifyPickupOtp: (orderId: string, stopId: string, otp: string) => boolean;
   advanceDeliveryStep: (orderId: string) => void;
@@ -302,8 +313,8 @@ interface OrderContextType {
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-const STORAGE_KEY = "arogyaswift_platform_orders_v4";
-const LEGACY_STORAGE_KEY = "arogyaswift_platform_orders_v3";
+const STORAGE_KEY = "arogyaswift_platform_orders_v5";
+const LEGACY_STORAGE_KEY = "arogyaswift_platform_orders_v4";
 
 function normalizeOrderOtps(order: any): PlatformOrder {
   const rawOtp = order.otp ? String(order.otp).replace(/\D/g, "") : "";
@@ -523,7 +534,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   const assignRider = (
     orderId: string,
     riderType: "own" | "shared",
-    riderName: string
+    riderName: string,
+    riderId?: string,
+    riderPhone?: string
   ) => {
     setOrders((prev) =>
       prev.map((order) => {
@@ -538,6 +551,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             statusLabel: `Rider assigned (${riderName})`,
             riderName,
             riderType: formattedType,
+            riderId: riderId || order.riderId,
+            riderPhone: riderPhone || order.riderPhone,
             currentStepIndex: 0
           };
         }
@@ -547,7 +562,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   };
 
   // 4. Delivery Rider Accepts Delivery Run
-  const acceptDeliveryRun = (orderId: string, riderName: string) => {
+  const acceptDeliveryRun = (orderId: string, riderName: string, riderId?: string) => {
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id === orderId) {
@@ -556,6 +571,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             status: "collecting",
             statusLabel: "Collecting from pharmacies",
             riderName: order.riderName && order.riderName !== "Pending dispatch" ? order.riderName : riderName,
+            riderId: riderId || order.riderId,
             currentStepIndex: 1
           };
         }
