@@ -162,7 +162,13 @@ export function PhoneSignupModal() {
                   type="tel"
                   placeholder="98765 43210"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, "");
+                    if (val.length > 10 && val.startsWith("91")) {
+                      val = val.slice(2);
+                    }
+                    setPhone(val.slice(0, 10));
+                  }}
                   maxLength={10}
                   className="bg-slate-50 border-slate-300 font-mono text-slate-900 text-sm"
                   required

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LovableHeader } from "@/components/LovableHeader";
 import { LovableFooter } from "@/components/LovableFooter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,16 @@ interface MedicineRow {
   quantity: string;
 }
 
+// Helper to strip any redundant +91 or non-digits, keeping only clean 10 mobile digits
+const cleanTo10Digits = (val?: string) => {
+  if (!val) return "";
+  let digits = val.replace(/\D/g, "");
+  if (digits.length > 10 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  }
+  return digits.slice(0, 10);
+};
+
 export default function CustomerPortal() {
   const { user, isAuthenticated, setIsPhoneSignupModalOpen, setPhoneSignupRole } = useAuth();
   const { orders, createPatientRequest } = useOrders();
@@ -37,11 +47,21 @@ export default function CustomerPortal() {
 
   // Form State
   const [fullName, setFullName] = useState(user?.name || "Asha Rao");
-  const [mobile, setMobile] = useState(user?.phone || "9845012345");
+  const [mobile, setMobile] = useState(() => cleanTo10Digits(user?.phone) || "9845012345");
   const [address, setAddress] = useState("124, 4th Cross, Defence Colony");
   const [area, setArea] = useState("Indiranagar, Bengaluru");
   const [isUrgent, setIsUrgent] = useState(false);
   const [prescriptionFile, setPrescriptionFile] = useState<string | null>(null);
+
+  // Sync state if user changes
+  useEffect(() => {
+    if (user?.phone) {
+      setMobile(cleanTo10Digits(user.phone));
+    }
+    if (user?.name) {
+      setFullName(user.name);
+    }
+  }, [user?.phone, user?.name]);
 
   // Anti-Spam Honeypot & Debounce State
   const [honeypot, setHoneypot] = useState("");
@@ -98,7 +118,7 @@ export default function CustomerPortal() {
 
     // 3. Strict Input Validation
     const errors: Record<string, string> = {};
-    const cleanPhone = mobile.replace(/\D/g, "");
+    const cleanPhone = cleanTo10Digits(mobile);
 
     if (fullName.trim().length < 2) {
       errors.fullName = "Please enter your full name (minimum 2 characters)";
@@ -247,21 +267,25 @@ export default function CustomerPortal() {
                       Mobile (for OTP & chemist contact)
                     </label>
                     <div className="flex">
-                      <span className="inline-flex items-center px-3 text-xs font-medium text-slate-500 bg-slate-100 border border-r-0 border-slate-200 rounded-l-lg">
+                      <span className="inline-flex items-center px-3 text-xs font-semibold text-slate-500 bg-slate-100 border border-r-0 border-slate-200 rounded-l-lg select-none">
                         +91
                       </span>
                       <input
                         type="tel"
                         value={mobile}
                         onChange={(e) => {
-                          setMobile(e.target.value);
+                          const cleaned = cleanTo10Digits(e.target.value);
+                          setMobile(cleaned);
                           if (validationErrors.mobile) {
                             setValidationErrors((prev) => ({ ...prev, mobile: "" }));
                           }
                         }}
-                        placeholder="9845012345"
+                        placeholder="98450 12345"
+                        maxLength={10}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         required
-                        className={`w-full px-3 py-2 text-sm rounded-r-lg border bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors ${
+                        className={`w-full px-3 py-2 text-sm rounded-r-lg border bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors font-mono tracking-wide ${
                           validationErrors.mobile ? "border-rose-400 bg-rose-50/30" : "border-slate-200"
                         }`}
                       />
