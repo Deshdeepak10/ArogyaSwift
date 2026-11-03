@@ -50,9 +50,10 @@ const cleanTo10Digits = (val?: string) => {
 
 export default function CustomerPortal() {
   const { user, isAuthenticated, setIsPhoneSignupModalOpen, setPhoneSignupRole } = useAuth();
-  const { orders, createPatientRequest } = useOrders();
+  const { orders, createPatientRequest, confirmPatientOrder, declinePatientQuote } = useOrders();
 
   const [activeTab, setActiveTab] = useState<"new_request" | "my_orders">("new_request");
+  const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<Record<string, "ONLINE" | "COD">>({});
 
   // Form State
   const [fullName, setFullName] = useState(user?.name || "Asha Rao");
@@ -481,6 +482,16 @@ export default function CustomerPortal() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleConfirmOrder = (orderId: string, paymentMethod: "ONLINE" | "COD" = "ONLINE") => {
+    confirmPatientOrder(orderId, paymentMethod);
+    toast.success(`Order ${orderId} placed successfully! Chemist is packing your medicines.`);
+  };
+
+  const handleDeclineQuote = (orderId: string) => {
+    declinePatientQuote(orderId);
+    toast.info(`Quotation for ${orderId} was declined. Order request cancelled.`);
   };
 
   return (
@@ -1031,28 +1042,152 @@ export default function CustomerPortal() {
                           : order.status === "out_for_delivery" || order.status === "collecting"
                           ? "bg-amber-100 text-amber-900 border border-amber-200"
                           : order.status === "quoted"
-                          ? "bg-emerald-100 text-emerald-950 border border-emerald-300 font-extrabold"
+                          ? "bg-amber-100 text-amber-950 border border-amber-300 font-extrabold"
+                          : order.status === "order_confirmed"
+                          ? "bg-emerald-100 text-emerald-950 border border-emerald-300 font-bold"
+                          : order.status === "cancelled" || order.status === "rejected"
+                          ? "bg-rose-100 text-rose-800 border border-rose-200"
                           : "bg-emerald-50 text-emerald-800 border border-emerald-200"
                       }`}
                     >
-                      {order.statusLabel}
+                      {order.status === "quoted"
+                        ? `Price Quoted ₹${order.totalAmount} · Awaiting Confirmation`
+                        : order.statusLabel}
                     </span>
                   </div>
 
-                  {/* Delivery OTP Card (Always visible to patient for verification) */}
-                  <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-4 flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800">
-                        Delivery OTP
+                  {/* Decision Box if quoted OR Delivery OTP once confirmed */}
+                  {order.status === "quoted" ? (
+                    <div className="bg-emerald-50/70 border-2 border-emerald-400/80 rounded-2xl p-5 space-y-4 shadow-xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#065F46] text-white">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                            Chemist Price Quote Ready
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 mt-2">
+                            Pharmacist reviewed your request and confirmed items
+                          </h4>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            Please review the medicine prices and total amount. Confirm to place your order or decline.
+                          </p>
+                        </div>
+                        <div className="sm:text-right shrink-0">
+                          <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                            Total Quoted Amount
+                          </div>
+                          <div className="text-2xl font-black text-[#065F46]">
+                            ₹{order.totalAmount}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-2xl font-black tracking-widest text-[#065F46] font-mono mt-0.5">
-                        {(order.otp || "4821").slice(0, 4)}
+
+                      {/* Payment Method Selector */}
+                      <div className="bg-white rounded-xl p-3 border border-emerald-200/80 space-y-2">
+                        <div className="text-xs font-bold text-slate-800">
+                          Choose payment method:
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedPaymentMethods((prev) => ({ ...prev, [order.id]: "ONLINE" }))
+                            }
+                            className={`p-2.5 rounded-lg text-xs font-bold border transition-all text-left flex items-center gap-2.5 cursor-pointer ${
+                              (selectedPaymentMethods[order.id] || order.paymentMethod || "ONLINE") === "ONLINE"
+                                ? "bg-emerald-50/80 text-emerald-900 border-emerald-500 ring-2 ring-emerald-500/20"
+                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                            }`}
+                          >
+                            <span className="text-base">💳</span>
+                            <div>
+                              <div className="font-bold">Pay Online (UPI / Card)</div>
+                              <div className="text-[10px] text-slate-500 font-normal">Contactless digital checkout</div>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedPaymentMethods((prev) => ({ ...prev, [order.id]: "COD" }))
+                            }
+                            className={`p-2.5 rounded-lg text-xs font-bold border transition-all text-left flex items-center gap-2.5 cursor-pointer ${
+                              (selectedPaymentMethods[order.id] || order.paymentMethod) === "COD"
+                                ? "bg-emerald-50/80 text-emerald-900 border-emerald-500 ring-2 ring-emerald-500/20"
+                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                            }`}
+                          >
+                            <span className="text-base">💵</span>
+                            <div>
+                              <div className="font-bold">Cash on Delivery (COD)</div>
+                              <div className="text-[10px] text-slate-500 font-normal">Pay cash or QR at doorstep</div>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Decision Buttons: Place Order vs Decline */}
+                      <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleConfirmOrder(
+                              order.id,
+                              selectedPaymentMethods[order.id] || order.paymentMethod || "ONLINE"
+                            )
+                          }
+                          className="w-full sm:flex-1 py-3 px-4 rounded-xl font-bold bg-[#065F46] hover:bg-[#044E39] text-white transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Confirm & Place Order (₹{order.totalAmount})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeclineQuote(order.id)}
+                          className="w-full sm:w-auto py-3 px-4 rounded-xl font-bold bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 transition-colors text-xs sm:text-sm cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Decline quote</span>
+                        </button>
                       </div>
                     </div>
-                    <div className="text-right text-[11px] text-emerald-800/80 max-w-[200px]">
-                      Share this code only when rider delivers your sealed parcel.
+                  ) : order.status === "in_review" ? (
+                    <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 flex items-center gap-3 text-xs text-amber-900">
+                      <Clock className="w-5 h-5 text-amber-700 shrink-0" />
+                      <div>
+                        <div className="font-bold text-amber-900">Pharmacist Review in Progress</div>
+                        <div className="text-amber-800/80 text-[11px] mt-0.5">
+                          Local pharmacists are checking stock and verifying your prescription. You will receive an itemized price quotation shortly to review and place your order.
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : order.status === "cancelled" || order.status === "rejected" ? (
+                    <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 flex items-center gap-3 text-xs text-slate-600">
+                      <AlertCircle className="w-5 h-5 text-slate-500 shrink-0" />
+                      <div>
+                        <div className="font-bold text-slate-800">Order Request Cancelled</div>
+                        <div className="text-slate-500 text-[11px] mt-0.5">
+                          This request has been cancelled. No payments or deliveries will be processed.
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Confirmed & Active Order: Show Delivery OTP */
+                    <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-4 flex items-center justify-between">
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-800">
+                          Delivery OTP
+                        </div>
+                        <div className="text-2xl font-black tracking-widest text-[#065F46] font-mono mt-0.5">
+                          {(order.otp || "4821").slice(0, 4)}
+                        </div>
+                      </div>
+                      <div className="text-right text-[11px] text-emerald-800/80 max-w-[200px]">
+                        Share this code only when rider delivers your sealed parcel.
+                      </div>
+                    </div>
+                  )}
 
                   {/* Items list with live pricing */}
                   <div className="space-y-1.5 text-xs">
@@ -1115,8 +1250,22 @@ export default function CustomerPortal() {
                     <div className="flex items-center gap-2">
                       <Bike className="w-4 h-4 text-emerald-700" />
                       <div>
-                        <div className="font-semibold text-slate-800">{order.riderName || "Pending assignment"}</div>
-                        <div className="text-[10px] text-slate-400">{order.riderType || "ArogyaSwift Shared Partner"}</div>
+                        <div className="font-semibold text-slate-800">
+                          {order.status === "quoted"
+                            ? "Awaiting your order confirmation"
+                            : order.status === "in_review"
+                            ? "Chemist reviewing request"
+                            : order.status === "cancelled" || order.status === "rejected"
+                            ? "Order cancelled"
+                            : order.riderName || "Pending chemist dispatch"}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {order.status === "quoted"
+                            ? "Rider will be dispatched once you place order"
+                            : order.status === "in_review"
+                            ? "Quotes expected in 5-10 mins"
+                            : order.riderType || "ArogyaSwift Shared Partner"}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">

@@ -3,12 +3,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 export type OrderStatus =
   | "in_review"
   | "quoted"
+  | "order_confirmed"
   | "rider_assigned"
   | "collecting"
   | "picked_up"
   | "out_for_delivery"
   | "delivered"
-  | "rejected";
+  | "rejected"
+  | "cancelled";
 
 export interface OrderItem {
   id: string;
@@ -119,7 +121,7 @@ const INITIAL_ORDERS: PlatformOrder[] = [
     otp: "7712",
     pickupOtp: "3491",
     status: "quoted",
-    statusLabel: "Quote sent · Ready for dispatch",
+    statusLabel: "Price Quoted ₹187 · Awaiting Patient Confirmation",
     riderName: "Unassigned",
     riderType: "Pending selection",
     currentStepIndex: 0,
@@ -287,6 +289,8 @@ interface OrderContextType {
     medicines: { id: string; name: string; quantity: string }[];
   }) => string;
   approvePharmacyQuote: (orderId: string, items: OrderItem[], total: number) => void;
+  confirmPatientOrder: (orderId: string, paymentMethod?: "ONLINE" | "COD") => void;
+  declinePatientQuote: (orderId: string, reason?: string) => void;
   rejectPharmacyRequest: (orderId: string) => void;
   assignRider: (orderId: string, riderType: "own" | "shared", riderName: string) => void;
   acceptDeliveryRun: (orderId: string, riderName: string) => void;
@@ -462,7 +466,41 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             pickupOtp: assignedPickupOtp,
             pickupStops: updatedStops,
             status: "quoted",
-            statusLabel: `Confirmed · Price Quoted ₹${finalAmount}`
+            statusLabel: `Price Quoted ₹${finalAmount} · Awaiting Patient Confirmation`
+          };
+        }
+        return order;
+      })
+    );
+  };
+
+  // Patient Confirms Quoted Order
+  const confirmPatientOrder = (orderId: string, paymentMethod: "ONLINE" | "COD" = "ONLINE") => {
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id === orderId) {
+          return {
+            ...order,
+            status: "order_confirmed",
+            statusLabel: "Order Confirmed · Chemist preparing parcel",
+            paymentMethod,
+            riderName: "Pending chemist dispatch"
+          };
+        }
+        return order;
+      })
+    );
+  };
+
+  // Patient Declines Quoted Order
+  const declinePatientQuote = (orderId: string, reason?: string) => {
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id === orderId) {
+          return {
+            ...order,
+            status: "cancelled",
+            statusLabel: "Quote Declined by Patient"
           };
         }
         return order;
@@ -678,6 +716,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         orders,
         createPatientRequest,
         approvePharmacyQuote,
+        confirmPatientOrder,
+        declinePatientQuote,
         rejectPharmacyRequest,
         assignRider,
         acceptDeliveryRun,

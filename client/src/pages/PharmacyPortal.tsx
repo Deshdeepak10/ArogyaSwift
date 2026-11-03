@@ -12,7 +12,8 @@ import {
   ShieldCheck,
   Send,
   AlertCircle,
-  KeyRound
+  KeyRound,
+  Clock
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +47,7 @@ export default function PharmacyPortal() {
   const acceptedOrders = orders.filter(
     (o) =>
       o.status === "quoted" ||
+      o.status === "order_confirmed" ||
       o.status === "rider_assigned" ||
       o.status === "collecting" ||
       o.status === "picked_up"
@@ -351,91 +353,123 @@ export default function PharmacyPortal() {
                   </span>
                 </div>
 
-                {/* Handover Pickup OTP for Delivery Rider */}
-                <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Chemist Pickup Handover OTP</span>
+                {/* Status indicator: Awaiting patient or ready to dispatch */}
+                {order.status === "quoted" ? (
+                  <div className="bg-amber-50 border border-amber-200/90 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <Clock className="w-5 h-5 text-amber-700 shrink-0" />
+                      <div>
+                        <div className="text-xs font-bold text-amber-900">
+                          Waiting for Patient Confirmation (Quote: ₹{order.totalAmount})
+                        </div>
+                        <div className="text-[11px] text-amber-800/80 mt-0.5">
+                          Quotation has been sent to {order.patientName}. Handover OTP & rider dispatch will unlock automatically once the patient confirms and places the order.
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-2xl font-black font-mono tracking-widest text-[#065F46] mt-0.5">
-                      {order.pickupOtp || order.pickupStops[0]?.pickupOtp || "5823"}
-                    </div>
+                    <span className="px-3 py-1 bg-white text-amber-900 font-bold text-xs rounded-lg border border-amber-300 self-start sm:self-auto shrink-0 shadow-2xs">
+                      Awaiting Patient
+                    </span>
                   </div>
-                  <div className="text-xs text-emerald-800 sm:text-right max-w-sm">
-                    Give this 4-digit Pickup OTP to the delivery rider at store counter when handing over the sealed medicine parcel.
-                  </div>
-                </div>
-
-                {/* Hybrid Dispatch: Option A vs Option B */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Option A: Own Rider */}
-                  <div className="bg-slate-50/70 rounded-xl border border-slate-200/80 p-4 space-y-3">
-                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Bike className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Option A · Your own rider</span>
+                ) : (
+                  <>
+                    <div className="bg-emerald-100/70 border border-emerald-300 rounded-xl p-3 flex items-center justify-between text-xs font-bold text-emerald-950">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                        <span>Order Confirmed by Patient · Payment: {order.paymentMethod || "ONLINE"}</span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-emerald-800 bg-white/90 px-2 py-0.5 rounded border border-emerald-200">
+                        Ready to Pack & Handover
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-500">
-                      Send your in-house store delivery boy directly. Customer receives their phone number.
-                    </p>
 
-                    <div className="space-y-2 pt-1">
-                      {storeRiders.map((rider) => (
-                        <div
-                          key={rider.id}
-                          className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200 text-xs"
-                        >
-                          <div>
-                            <div className="font-bold text-slate-800">{rider.name}</div>
-                            <div className="text-[10px] text-slate-400">{rider.status}</div>
-                          </div>
+                    {/* Handover Pickup OTP for Delivery Rider */}
+                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Chemist Pickup Handover OTP</span>
+                        </div>
+                        <div className="text-2xl font-black font-mono tracking-widest text-[#065F46] mt-0.5">
+                          {order.pickupOtp || order.pickupStops[0]?.pickupOtp || "5823"}
+                        </div>
+                      </div>
+                      <div className="text-xs text-emerald-800 sm:text-right max-w-sm">
+                        Give this 4-digit Pickup OTP to the delivery rider at store counter when handing over the sealed medicine parcel.
+                      </div>
+                    </div>
+
+                    {/* Hybrid Dispatch: Option A vs Option B */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Option A: Own Rider */}
+                      <div className="bg-slate-50/70 rounded-xl border border-slate-200/80 p-4 space-y-3">
+                        <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <Bike className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Option A · Your own rider</span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Send your in-house store delivery boy directly. Customer receives their phone number.
+                        </p>
+
+                        <div className="space-y-2 pt-1">
+                          {storeRiders.map((rider) => (
+                            <div
+                              key={rider.id}
+                              className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200 text-xs"
+                            >
+                              <div>
+                                <div className="font-bold text-slate-800">{rider.name}</div>
+                                <div className="text-[10px] text-slate-400">{rider.status}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDispatchOwnRider(order.id, rider.name)}
+                                className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors cursor-pointer"
+                              >
+                                Send {rider.name}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Option B: Nearby Shared Partner */}
+                      <div className="bg-slate-50/70 rounded-xl border border-slate-200/80 p-4 space-y-3">
+                        <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <Store className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Option B · Nearby shared partner</span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          No staff free? Broadcast to verified delivery partner fleet in Indiranagar.
+                        </p>
+
+                        <div className="space-y-3 pt-1">
+                          <select
+                            value={selectedSharedPartner}
+                            onChange={(e) => setSelectedSharedPartner(e.target.value)}
+                            className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white cursor-pointer"
+                          >
+                            <option value="Ravi Kumar (Ekart · 2 mins away · 4.9★)">
+                              Ravi Kumar (Ekart · 2 mins away · 4.9★)
+                            </option>
+                            <option value="Sunil Das (Dunzo fleet · 4 mins away · 4.8★)">
+                              Sunil Das (Dunzo fleet · 4 mins away · 4.8★)
+                            </option>
+                          </select>
+
                           <button
                             type="button"
-                            onClick={() => handleDispatchOwnRider(order.id, rider.name)}
-                            className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] transition-colors cursor-pointer"
+                            onClick={() => handleRequestSharedPartner(order.id)}
+                            className="w-full py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                           >
-                            Send {rider.name}
+                            <Bike className="w-3.5 h-3.5" />
+                            <span>Request partner</span>
                           </button>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Option B: Nearby Shared Partner */}
-                  <div className="bg-slate-50/70 rounded-xl border border-slate-200/80 p-4 space-y-3">
-                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Store className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>Option B · Nearby shared partner</span>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      No staff free? Broadcast to verified delivery partner fleet in Indiranagar.
-                    </p>
-
-                    <div className="space-y-3 pt-1">
-                      <select
-                        value={selectedSharedPartner}
-                        onChange={(e) => setSelectedSharedPartner(e.target.value)}
-                        className="w-full text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white cursor-pointer"
-                      >
-                        <option value="Ravi Kumar (Ekart · 2 mins away · 4.9★)">
-                          Ravi Kumar (Ekart · 2 mins away · 4.9★)
-                        </option>
-                        <option value="Sunil Das (Dunzo fleet · 4 mins away · 4.8★)">
-                          Sunil Das (Dunzo fleet · 4 mins away · 4.8★)
-                        </option>
-                      </select>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRequestSharedPartner(order.id)}
-                        className="w-full py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Bike className="w-3.5 h-3.5" />
-                        <span>Request partner</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

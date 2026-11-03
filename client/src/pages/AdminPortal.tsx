@@ -74,6 +74,7 @@ export default function AdminPortal() {
   const liveCount = orders.filter(
     (o) =>
       o.status === "quoted" ||
+      o.status === "order_confirmed" ||
       o.status === "rider_assigned" ||
       o.status === "collecting" ||
       o.status === "picked_up" ||
@@ -90,6 +91,7 @@ export default function AdminPortal() {
     if (filter === "Live")
       return (
         o.status === "quoted" ||
+        o.status === "order_confirmed" ||
         o.status === "rider_assigned" ||
         o.status === "collecting" ||
         o.status === "picked_up" ||
