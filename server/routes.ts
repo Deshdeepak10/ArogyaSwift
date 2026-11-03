@@ -21,7 +21,7 @@ import { getDbStatus, pool } from "./db";
 
 export function registerRoutes(app: Express): void {
   // 1. Public Health Check
-  app.get("/api/public/health", publicRateLimiter, (_req: Request, res: Response) => {
+  const healthHandler = (_req: Request, res: Response) => {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
@@ -29,7 +29,9 @@ export function registerRoutes(app: Express): void {
       cdsco_compliance_mode: "Strict",
       database: getDbStatus(),
     });
-  });
+  };
+  app.get("/api/public/health", publicRateLimiter, healthHandler);
+  app.get("/api/health", publicRateLimiter, healthHandler);
 
   // 1b. Database Connection Health Check
   app.get("/api/db/health", publicRateLimiter, async (_req: Request, res: Response) => {

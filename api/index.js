@@ -331,7 +331,7 @@ function getDbStatus() {
 
 // server/routes.ts
 function registerRoutes(app2) {
-  app2.get("/api/public/health", publicRateLimiter, (_req, res) => {
+  const healthHandler = (_req, res) => {
     res.json({
       status: "ok",
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
@@ -339,7 +339,9 @@ function registerRoutes(app2) {
       cdsco_compliance_mode: "Strict",
       database: getDbStatus()
     });
-  });
+  };
+  app2.get("/api/public/health", publicRateLimiter, healthHandler);
+  app2.get("/api/health", publicRateLimiter, healthHandler);
   app2.get("/api/db/health", publicRateLimiter, async (_req, res) => {
     const status = getDbStatus();
     if (!pool) {
