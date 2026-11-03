@@ -18,6 +18,12 @@ export function createApp() {
   // 3. Sensitive Path & Source Shield: Block any attempt to read backend source, configs, or hidden files
   app.use((req: Request, res: Response, next: NextFunction) => {
     const pathLower = req.path.toLowerCase();
+
+    // Allow legitimate API routes to process
+    if (pathLower.startsWith("/api")) {
+      return next();
+    }
+
     const sensitivePatterns = [
       "/.env",
       "/.git",
