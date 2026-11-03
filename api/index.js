@@ -1046,10 +1046,11 @@ function createApp() {
 }
 var app = createApp();
 
-// api/index.ts
+// server/vercel.ts
 function handler(req, res) {
   return app(req, res);
 }
 export {
+  app,
   handler as default
 };
