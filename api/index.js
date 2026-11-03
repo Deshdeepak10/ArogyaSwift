@@ -971,7 +971,7 @@ function createApp() {
   app2.set("trust proxy", 1);
   app2.disable("x-powered-by");
   app2.use((req, res, next) => {
-    const pathLower = req.path.toLowerCase();
+    const pathLower = (req.path || req.url || "").toLowerCase();
     if (pathLower.startsWith("/api")) {
       return next();
     }
@@ -997,42 +997,46 @@ function createApp() {
     }
     next();
   });
-  app2.use((req, res, next) => {
-    const isProduction = process.env.NODE_ENV === "production" || process.env.FORCE_HTTPS === "true";
-    const forwardedProto = req.headers["x-forwarded-proto"];
-    let cfVisitorScheme = null;
-    try {
-      if (req.headers["cf-visitor"]) {
-        const parsed = JSON.parse(req.headers["cf-visitor"]);
-        cfVisitorScheme = parsed.scheme;
+  if (!process.env.VERCEL) {
+    app2.use((req, res, next) => {
+      const isProduction = process.env.NODE_ENV === "production" || process.env.FORCE_HTTPS === "true";
+      const forwardedProto = req.headers["x-forwarded-proto"];
+      let cfVisitorScheme = null;
+      try {
+        if (req.headers["cf-visitor"]) {
+          const parsed = JSON.parse(req.headers["cf-visitor"]);
+          cfVisitorScheme = parsed.scheme;
+        }
+      } catch {
       }
-    } catch {
-    }
-    const isHttp = forwardedProto === "http" || cfVisitorScheme === "http" || !req.secure && isProduction && forwardedProto !== "https";
-    if (isHttp && isProduction) {
-      const host = req.headers.host || req.hostname;
-      return res.redirect(301, `https://${host}${req.originalUrl}`);
-    }
-    res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
-    res.setHeader("Content-Security-Policy", "upgrade-insecure-requests");
-    next();
-  });
+      const isHttp = forwardedProto === "http" || cfVisitorScheme === "http" || !req.secure && isProduction && forwardedProto !== "https";
+      if (isHttp && isProduction) {
+        const host = req.headers.host || req.hostname;
+        return res.redirect(301, `https://${host}${req.originalUrl || req.url || ""}`);
+      }
+      res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+      res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
+      res.setHeader("Content-Security-Policy", "upgrade-insecure-requests");
+      next();
+    });
+  }
   app2.use(express.json({ limit: "2mb" }));
   app2.use(express.urlencoded({ extended: false, limit: "2mb" }));
   registerRoutes(app2);
-  const staticPath = process.env.NODE_ENV === "production" ? path.resolve(__dirname, "public") : path.resolve(__dirname, "..", "dist", "public");
-  app2.use(
-    express.static(staticPath, {
-      dotfiles: "ignore",
-      index: "index.html",
-      fallthrough: true,
-      maxAge: process.env.NODE_ENV === "production" ? "1d" : 0
-    })
-  );
+  if (!process.env.VERCEL) {
+    const staticPath = process.env.NODE_ENV === "production" ? path.resolve(__dirname, "public") : path.resolve(__dirname, "..", "dist", "public");
+    app2.use(
+      express.static(staticPath, {
+        dotfiles: "ignore",
+        index: "index.html",
+        fallthrough: true,
+        maxAge: process.env.NODE_ENV === "production" ? "1d" : 0
+      })
+    );
+  }
   app2.use((err, _req, res, _next) => {
     console.error("[ArogyaSwift Internal Error]", err?.message || err);
     const status = err.status || err.statusCode || 500;
@@ -1048,7 +1052,18 @@ var app = createApp();
 
 // server/vercel.ts
 function handler(req, res) {
-  return app(req, res);
+  try {
+    return app(req, res);
+  } catch (err) {
+    console.error("[Vercel Serverless Invocation Error]", err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Serverless Function Exception",
+        message: err?.message || String(err),
+        stack: err?.stack
+      });
+    }
+  }
 }
 export {
   app,
