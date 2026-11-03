@@ -458,19 +458,41 @@ export default function PharmacyPortal() {
                 </button>
               </div>
 
-              <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex flex-col items-center justify-center p-6 text-center">
-                <FileText className="w-12 h-12 text-emerald-700 mb-2" />
-                <div className="text-sm font-bold text-slate-800">
-                  Dr. Rajesh Sharma, MBBS (Reg #KA-44821)
-                </div>
-                <div className="text-xs text-slate-500 mt-1">
-                  Patient Clinic Rx · Indiranagar Clinical Centre
-                </div>
-                <div className="mt-4 p-3 bg-white rounded-lg border border-slate-200 text-xs text-left w-full space-y-1">
-                  <div>1. Tab. Paracetamol 650mg — 1-0-1 x 5 days</div>
-                  <div>2. Tab. Azithromycin 500mg — 1-0-0 x 5 days</div>
-                </div>
-              </div>
+              {/* Prescription Display (Real patient uploaded image or default clinic Rx) */}
+              {(() => {
+                const targetOrder = incomingRequests.find((o) => o.id === modalPrescriptionOrder);
+                if (
+                  targetOrder?.prescriptionUrl &&
+                  (targetOrder.prescriptionUrl.startsWith("data:") ||
+                    targetOrder.prescriptionUrl.startsWith("http") ||
+                    targetOrder.prescriptionUrl.startsWith("blob:"))
+                ) {
+                  return (
+                    <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center p-2 max-h-[65vh]">
+                      <img
+                        src={targetOrder.prescriptionUrl}
+                        alt="Prescription preview"
+                        className="max-h-[60vh] w-auto object-contain rounded-lg shadow-md"
+                      />
+                    </div>
+                  );
+                }
+                return (
+                  <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex flex-col items-center justify-center p-6 text-center">
+                    <FileText className="w-12 h-12 text-emerald-700 mb-2" />
+                    <div className="text-sm font-bold text-slate-800">
+                      Dr. Rajesh Sharma, MBBS (Reg #KA-44821)
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Patient Clinic Rx · Indiranagar Clinical Centre
+                    </div>
+                    <div className="mt-4 p-3 bg-white rounded-lg border border-slate-200 text-xs text-left w-full space-y-1">
+                      <div>1. Tab. Paracetamol 650mg — 1-0-1 x 5 days</div>
+                      <div>2. Tab. Azithromycin 500mg — 1-0-0 x 5 days</div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex justify-end pt-2">
                 <button

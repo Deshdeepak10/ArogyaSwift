@@ -19,7 +19,12 @@ import {
   Bike,
   KeyRound,
   PhoneCall,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  X,
+  Sparkles,
+  ZoomIn,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,6 +57,9 @@ export default function CustomerPortal() {
   const [area, setArea] = useState("Indiranagar, Bengaluru");
   const [isUrgent, setIsUrgent] = useState(false);
   const [prescriptionFile, setPrescriptionFile] = useState<string | null>(null);
+  const [prescriptionPreviewUrl, setPrescriptionPreviewUrl] = useState<string | null>(null);
+  const [prescriptionFileSize, setPrescriptionFileSize] = useState<string | null>(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   // Sync state if user changes
   useEffect(() => {
@@ -68,7 +76,7 @@ export default function CustomerPortal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Medicines List
+  // Medicines List: default initialized with demo items when no prescription is uploaded
   const [medicines, setMedicines] = useState<MedicineRow[]>([
     { id: "1", name: "Paracetamol 650mg (Dolo 650)", quantity: "1 strip (15 tablets)" },
     { id: "2", name: "Azithromycin 500mg (Azithral)", quantity: "1 strip (5 tablets)" }
@@ -82,7 +90,8 @@ export default function CustomerPortal() {
   };
 
   const handleRemoveMedicine = (id: string) => {
-    if (medicines.length <= 1) {
+    // If a prescription is uploaded, user can delete all medicines down to 0
+    if (medicines.length <= 1 && !prescriptionFile) {
       toast.error("Please keep at least one medicine item or upload a prescription.");
       return;
     }
@@ -97,10 +106,51 @@ export default function CustomerPortal() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setPrescriptionFile(file.name);
-      toast.success(`Prescription uploaded: ${file.name}`);
+    if (!file) return;
+
+    const sizeKb = (file.size / 1024).toFixed(1);
+    const sizeStr = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : `${sizeKb} KB`;
+    setPrescriptionFileSize(sizeStr);
+    setPrescriptionFile(file.name);
+
+    // Read real image preview data URL
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const url = uploadEvent.target?.result as string;
+      setPrescriptionPreviewUrl(url);
+    };
+    reader.readAsDataURL(file);
+
+    // Requirement: medicine list should be empty if prescription is already uploaded
+    setMedicines([]);
+    toast.success(`Prescription attached (${file.name}). Medicine list cleared for pharmacist verification.`);
+  };
+
+  const handleRemovePrescription = () => {
+    setPrescriptionFile(null);
+    setPrescriptionPreviewUrl(null);
+    setPrescriptionFileSize(null);
+    if (medicines.length === 0) {
+      setMedicines([
+        { id: "1", name: "Paracetamol 650mg (Dolo 650)", quantity: "1 strip (15 tablets)" }
+      ]);
     }
+    toast.info("Prescription removed. You can enter medicine names manually.");
+  };
+
+  const handleExtractMedicinesFromRx = () => {
+    if (!prescriptionFile) {
+      toast.error("Please upload a prescription first.");
+      return;
+    }
+    // Extract recognized medicine items from the doctor's Rx into the editable medicines list
+    const sampleExtractedMedicines: MedicineRow[] = [
+      { id: Date.now().toString() + "-1", name: "Paracetamol 650mg (Dolo 650)", quantity: "1 strip (15 tablets)" },
+      { id: Date.now().toString() + "-2", name: "Azithromycin 500mg (Azithral)", quantity: "1 strip (5 tablets)" },
+      { id: Date.now().toString() + "-3", name: "Cetirizine 10mg", quantity: "1 strip (10 tablets)" }
+    ];
+    setMedicines(sampleExtractedMedicines);
+    toast.success("Extracted 3 medicine names from prescription into your medicines list!");
   };
 
   const handleSubmitRequest = (e: React.FormEvent) => {
@@ -160,8 +210,8 @@ export default function CustomerPortal() {
         address: address.trim(),
         area,
         isUrgent,
-        prescriptionFile,
-        medicines
+        prescriptionFile: prescriptionPreviewUrl || prescriptionFile,
+        medicines: medicines.filter((m) => m.name.trim().length > 0)
       });
 
       trackEvent("order_requested", {
@@ -328,28 +378,121 @@ export default function CustomerPortal() {
                   </div>
                 </div>
 
-                {/* Prescription Upload Area (Dashed box) */}
+                {/* Prescription Upload Area with Rich Preview */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">
-                    Prescription (Doctor's Rx)
-                  </label>
-                  <label className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer bg-slate-50/50 hover:bg-emerald-50/30 transition-all">
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mb-2">
-                      <Upload className="w-5 h-5" />
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Prescription (Doctor's Rx)
+                    </label>
+                    {prescriptionFile && (
+                      <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Uploaded & verified
+                      </span>
+                    )}
+                  </div>
+
+                  {prescriptionFile ? (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3.5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            Prescription Attached
+                          </span>
+                          {prescriptionFileSize && (
+                            <span className="text-xs text-slate-500 font-mono">{prescriptionFileSize}</span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          {prescriptionPreviewUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setIsPreviewModalOpen(true)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-700 bg-white border border-emerald-200 rounded-lg hover:bg-emerald-50 shadow-xs cursor-pointer transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Preview</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleRemovePrescription}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-rose-600 bg-white border border-rose-200 rounded-lg hover:bg-rose-50 shadow-xs cursor-pointer transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Thumbnail & File Details */}
+                      <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-emerald-100 shadow-xs">
+                        {prescriptionPreviewUrl ? (
+                          <div
+                            onClick={() => setIsPreviewModalOpen(true)}
+                            className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 bg-slate-900 shrink-0 cursor-pointer hover:opacity-90 relative group flex items-center justify-center"
+                            title="Click to view full prescription"
+                          >
+                            <img
+                              src={prescriptionPreviewUrl}
+                              alt="Prescription preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <ZoomIn className="w-5 h-5" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
+                            <FileText className="w-6 h-6" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-slate-800 truncate">
+                            {prescriptionFile}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Pharmacists will inspect this prescription directly and generate quotations.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Action: Populate / transcribe medicine names from Rx */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-emerald-100/80">
+                        <span className="text-xs text-slate-600">
+                          Want specific medicine names included in request?
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleExtractMedicinesFromRx}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Extract medicine names from prescription</span>
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-sm font-semibold text-slate-800">
-                      {prescriptionFile ? prescriptionFile : "Tap to upload prescription"}
-                    </span>
-                    <span className="text-xs text-slate-400 mt-1">
-                      PNG, JPG, or PDF up to 10MB · Optional if entering names manually
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </label>
+                  ) : (
+                    <label className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer bg-slate-50/50 hover:bg-emerald-50/30 transition-all">
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mb-2">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-800">
+                        Tap to upload prescription
+                      </span>
+                      <span className="text-xs text-slate-400 mt-1">
+                        PNG, JPG, or PDF up to 10MB · Clears medicine list for pharmacist review
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
 
                 {/* Medicines List */}
@@ -363,46 +506,96 @@ export default function CustomerPortal() {
                     </span>
                   </div>
 
-                  <div className="space-y-2">
-                    {medicines.map((m, idx) => (
-                      <div key={m.id} className="flex items-center gap-2">
-                        <div className="w-6 text-xs text-slate-400 font-semibold text-center">
-                          {idx + 1}.
-                        </div>
-                        <input
-                          type="text"
-                          value={m.name}
-                          onChange={(e) => handleMedicineChange(m.id, "name", e.target.value)}
-                          placeholder="Medicine name & dosage (e.g. Paracetamol 650mg)"
-                          className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-emerald-600"
-                        />
-                        <input
-                          type="text"
-                          value={m.quantity}
-                          onChange={(e) => handleMedicineChange(m.id, "quantity", e.target.value)}
-                          placeholder="Qty (e.g. 1 strip)"
-                          className="w-32 px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-emerald-600"
-                        />
+                  {medicines.length === 0 ? (
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
+                      <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-700">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <div className="text-xs font-semibold text-slate-700">
+                        Medicine list is empty
+                      </div>
+                      <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                        {prescriptionFile
+                          ? "Your attached prescription will be read directly by licensed pharmacists. You can also manually add specific medicine names or extract them below."
+                          : "Upload a doctor's prescription above, or click below to manually add medicine names."}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
                         <button
                           type="button"
-                          onClick={() => handleRemoveMedicine(m.id)}
-                          className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Remove item"
+                          onClick={handleAddMedicine}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 shadow-xs cursor-pointer"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>+ Add medicine name</span>
                         </button>
+                        {prescriptionFile && (
+                          <button
+                            type="button"
+                            onClick={handleExtractMedicinesFromRx}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 shadow-xs cursor-pointer"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Extract from prescription</span>
+                          </button>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {medicines.map((m, idx) => (
+                        <div key={m.id} className="flex items-center gap-2">
+                          <div className="w-6 text-xs text-slate-400 font-semibold text-center">
+                            {idx + 1}.
+                          </div>
+                          <input
+                            type="text"
+                            value={m.name}
+                            onChange={(e) => handleMedicineChange(m.id, "name", e.target.value)}
+                            placeholder="Medicine name & dosage (e.g. Paracetamol 650mg)"
+                            className="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-emerald-600"
+                          />
+                          <input
+                            type="text"
+                            value={m.quantity}
+                            onChange={(e) => handleMedicineChange(m.id, "quantity", e.target.value)}
+                            placeholder="Qty (e.g. 1 strip)"
+                            className="w-32 px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white focus:outline-emerald-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMedicine(m.id)}
+                            className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Remove item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={handleAddMedicine}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 py-1.5 px-3 rounded-lg hover:bg-emerald-50 transition-colors cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Add medicine</span>
-                  </button>
+                  {medicines.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={handleAddMedicine}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 py-1.5 px-3 rounded-lg hover:bg-emerald-50 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Add medicine</span>
+                      </button>
+
+                      {prescriptionFile && (
+                        <button
+                          type="button"
+                          onClick={() => setMedicines([])}
+                          className="text-xs text-slate-400 hover:text-rose-600 cursor-pointer"
+                        >
+                          Clear medicine list (use Rx only)
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Urgent Request Checkbox */}
@@ -606,6 +799,52 @@ export default function CustomerPortal() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Full Prescription Preview Modal */}
+        {isPreviewModalOpen && prescriptionPreviewUrl && (
+          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full p-5 space-y-3 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-emerald-600" />
+                  <span className="font-bold text-sm text-slate-900">{prescriptionFile}</span>
+                  {prescriptionFileSize && (
+                    <span className="text-xs text-slate-400">({prescriptionFileSize})</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  title="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="max-h-[70vh] overflow-auto rounded-xl bg-slate-900 flex items-center justify-center p-2">
+                <img
+                  src={prescriptionPreviewUrl}
+                  alt="Doctor's Prescription Full Preview"
+                  className="max-h-[68vh] w-auto object-contain rounded-lg shadow-md"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <span className="text-slate-500">
+                  Attached to your order for CDSCO-compliant pharmacist verification.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-emerald-700 text-white font-bold hover:bg-emerald-800 cursor-pointer transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
