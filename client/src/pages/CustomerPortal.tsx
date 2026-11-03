@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LovableHeader } from "@/components/LovableHeader";
 import { LovableFooter } from "@/components/LovableFooter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,7 +26,9 @@ import {
   Sparkles,
   ZoomIn,
   RefreshCw,
-  Loader2
+  Loader2,
+  Camera,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,6 +66,18 @@ export default function CustomerPortal() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrProgressText, setOcrProgressText] = useState("");
+
+  // Live Camera State & Device Viewfinder
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<"environment" | "user">("environment");
+  const [isCameraStarting, setIsCameraStarting] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [capturedPhotoTemp, setCapturedPhotoTemp] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
   // Sync state if user changes
   useEffect(() => {
@@ -125,6 +139,9 @@ export default function CustomerPortal() {
     };
     reader.readAsDataURL(file);
 
+    // Reset input value so selecting the same file triggers onChange
+    e.target.value = "";
+
     // Requirement: medicine list should be empty if prescription is already uploaded
     setMedicines([]);
     toast.success(`Prescription attached (${file.name}). Medicine list cleared for pharmacist verification.`);
@@ -141,6 +158,166 @@ export default function CustomerPortal() {
     }
     toast.info("Prescription removed. You can enter medicine names manually.");
   };
+
+  // Camera Lifecycle & Capture Handlers
+  const startCamera = async (facing: "environment" | "user" = cameraFacing) => {
+    setIsCameraStarting(true);
+    setCameraError(null);
+
+    // Stop any existing tracks first
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Live camera is not supported in this browser. Please use native phone camera or file upload.");
+      }
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+      } catch {
+        // Fallback without strict resolution constraints
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+      }
+
+      mediaStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+    } catch (err: any) {
+      console.warn("[Camera API error]:", err);
+      const isPermissionDenied =
+        err?.name === "NotAllowedError" ||
+        err?.name === "PermissionDeniedError" ||
+        err?.message?.toLowerCase().includes("permission");
+
+      setCameraError(
+        isPermissionDenied
+          ? "Camera permission was denied. Please allow camera permissions in your browser or tap below to launch your phone's native camera."
+          : "Could not open camera stream. Tap below to capture using your device camera."
+      );
+    } finally {
+      setIsCameraStarting(false);
+    }
+  };
+
+  const stopCameraStream = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const handleOpenLiveCamera = () => {
+    setCapturedPhotoTemp(null);
+    setCameraError(null);
+    setIsCameraModalOpen(true);
+  };
+
+  const handleCloseCameraModal = () => {
+    stopCameraStream();
+    setIsCameraModalOpen(false);
+    setCapturedPhotoTemp(null);
+    setCameraError(null);
+  };
+
+  const handleToggleCameraFacing = () => {
+    const nextFacing = cameraFacing === "environment" ? "user" : "environment";
+    setCameraFacing(nextFacing);
+  };
+
+  const handleCaptureSnapshot = () => {
+    const video = videoRef.current;
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+      toast.error("Camera is still loading. Please wait a moment and try again.");
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      toast.error("Could not capture image frame from camera.");
+      return;
+    }
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+
+    // Stop live stream once photo is taken
+    stopCameraStream();
+
+    // Show photo review screen in camera modal
+    setCapturedPhotoTemp(dataUrl);
+  };
+
+  const handleRetakeSnapshot = () => {
+    setCapturedPhotoTemp(null);
+    startCamera(cameraFacing);
+  };
+
+  const handleConfirmCapturedPhoto = () => {
+    if (!capturedPhotoTemp) return;
+
+    // Calculate approximate size in KB / MB
+    const base64Length = capturedPhotoTemp.length - (capturedPhotoTemp.indexOf(",") + 1);
+    const bytes = base64Length * 0.75;
+    const sizeKb = (bytes / 1024).toFixed(1);
+    const sizeStr = bytes > 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(2)} MB` : `${sizeKb} KB`;
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+    const fileName = `rx_camera_${timeStr}.jpg`;
+
+    setPrescriptionFile(fileName);
+    setPrescriptionPreviewUrl(capturedPhotoTemp);
+    setPrescriptionFileSize(sizeStr);
+
+    // Requirement: Empty medicine list by default when prescription is uploaded
+    setMedicines([]);
+
+    handleCloseCameraModal();
+    toast.success("Prescription photo attached! Medicine list cleared for pharmacist verification.");
+  };
+
+  const handleTriggerNativeCamera = () => {
+    handleCloseCameraModal();
+    cameraInputRef.current?.click();
+  };
+
+  // Sync camera stream when modal opens / closes or facing changes
+  useEffect(() => {
+    if (isCameraModalOpen && !capturedPhotoTemp) {
+      startCamera(cameraFacing);
+    } else if (!isCameraModalOpen) {
+      stopCameraStream();
+    }
+  }, [isCameraModalOpen, cameraFacing]);
+
+  // Clean up camera stream on unmount
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, []);
 
   const handleExtractMedicinesFromRx = async () => {
     if (!prescriptionPreviewUrl && !prescriptionFile) {
@@ -484,6 +661,15 @@ export default function CustomerPortal() {
                         </div>
 
                         <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleOpenLiveCamera}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-xs cursor-pointer transition-colors"
+                            title="Retake prescription with camera"
+                          >
+                            <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Retake</span>
+                          </button>
                           {prescriptionPreviewUrl && (
                             <button
                               type="button"
@@ -563,24 +749,69 @@ export default function CustomerPortal() {
                       </div>
                     </div>
                   ) : (
-                    <label className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-xl p-5 flex flex-col items-center justify-center text-center cursor-pointer bg-slate-50/50 hover:bg-emerald-50/30 transition-all">
-                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mb-2">
-                        <Upload className="w-5 h-5" />
+                    <div className="border-2 border-dashed border-slate-200 hover:border-emerald-400 rounded-xl p-5 bg-slate-50/50 hover:bg-emerald-50/20 transition-all text-center space-y-3">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-xs">
+                          <Camera className="w-5 h-5" />
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shadow-xs">
+                          <Upload className="w-5 h-5" />
+                        </div>
                       </div>
-                      <span className="text-sm font-semibold text-slate-800">
-                        Tap to upload prescription
-                      </span>
-                      <span className="text-xs text-slate-400 mt-1">
-                        PNG, JPG, or PDF up to 10MB · Clears medicine list for pharmacist review
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                    </label>
+
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">
+                          Doctor's Prescription (Rx)
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Snap a photo with your device camera or upload a file / PDF.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleOpenLiveCamera}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-[#065F46] hover:bg-[#044E39] rounded-lg shadow-sm hover:shadow transition-all cursor-pointer active:scale-95"
+                        >
+                          <Camera className="w-4 h-4" />
+                          <span>Take photo with camera</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-95"
+                        >
+                          <Upload className="w-4 h-4 text-slate-500" />
+                          <span>Upload file or PDF</span>
+                        </button>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400">
+                        PNG, JPG, WebP, or PDF up to 10MB · Uploading clears medicine list for verification
+                      </div>
+                    </div>
                   )}
+
+                  {/* Hidden file input for desktop/device picker */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+
+                  {/* Hidden camera input for mobile direct camera capture fallback */}
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
                 </div>
 
                 {/* Medicines List */}
@@ -942,6 +1173,180 @@ export default function CustomerPortal() {
                 >
                   Close
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Live Camera Viewfinder & Prescription Capture Modal */}
+        {isCameraModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+            <div className="bg-slate-900 text-white rounded-2xl max-w-xl w-full p-4 sm:p-5 space-y-4 shadow-2xl border border-slate-800 animate-in fade-in zoom-in-95">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-emerald-400" />
+                  <h3 className="font-bold text-sm sm:text-base text-white">
+                    {capturedPhotoTemp ? "Review Prescription Photo" : "Scan Prescription with Camera"}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseCameraModal}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
+                  title="Close camera"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Viewfinder or Captured Preview */}
+              <div className="relative bg-black rounded-xl overflow-hidden aspect-[4/3] flex items-center justify-center border border-slate-800">
+                {capturedPhotoTemp ? (
+                  <img
+                    src={capturedPhotoTemp}
+                    alt="Captured prescription preview"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Viewfinder Framing Overlay */}
+                    {!cameraError && !isCameraStarting && (
+                      <div className="absolute inset-4 pointer-events-none border-2 border-emerald-400/60 rounded-xl flex flex-col justify-between p-3">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-black/60 text-emerald-300 px-2 py-0.5 rounded-md backdrop-blur-xs">
+                            Align Doctor's Prescription
+                          </span>
+                          <span className="text-[10px] text-white/70 bg-black/60 px-2 py-0.5 rounded-md backdrop-blur-xs">
+                            Hold steady
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[11px] text-white/80 bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs shadow-xs">
+                            Ensure handwriting & medicine dosage are clearly visible
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Loading Indicator */}
+                    {isCameraStarting && (
+                      <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-2 text-white">
+                        <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+                        <span className="text-xs font-medium text-slate-300">Starting camera feed...</span>
+                      </div>
+                    )}
+
+                    {/* Camera Error / Permission Fallback View */}
+                    {cameraError && (
+                      <div className="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                          <AlertCircle className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-bold text-white">Camera Access Notice</h4>
+                          <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
+                            {cameraError}
+                          </p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={handleTriggerNativeCamera}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors shadow-sm"
+                          >
+                            <Camera className="w-4 h-4" />
+                            <span>Launch Device Camera App</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleCloseCameraModal();
+                              fileInputRef.current?.click();
+                            }}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg cursor-pointer transition-colors border border-slate-700"
+                          >
+                            <Upload className="w-4 h-4" />
+                            <span>Choose File from Storage</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Modal Controls / Footer */}
+              <div className="flex items-center justify-between pt-2">
+                {capturedPhotoTemp ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleRetakeSnapshot}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl cursor-pointer transition-colors border border-slate-700"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Retake photo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleConfirmCapturedPhoto}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-md active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Use this prescription</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Switch Camera Facing (Back / Front) */}
+                    <button
+                      type="button"
+                      onClick={handleToggleCameraFacing}
+                      disabled={isCameraStarting || Boolean(cameraError)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs font-semibold rounded-xl cursor-pointer transition-colors border border-slate-700"
+                      title="Switch between front and back cameras"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="hidden sm:inline">Flip ({cameraFacing === "environment" ? "Back" : "Front"})</span>
+                    </button>
+
+                    {/* Shutter Capture Button */}
+                    <div className="flex items-center justify-center">
+                      <button
+                        type="button"
+                        onClick={handleCaptureSnapshot}
+                        disabled={isCameraStarting || Boolean(cameraError)}
+                        className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-white hover:bg-slate-100 disabled:opacity-40 cursor-pointer transition-transform active:scale-90 shadow-lg border-4 border-slate-700"
+                        title="Capture prescription photo"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-emerald-600 group-hover:bg-emerald-500 flex items-center justify-center transition-colors">
+                          <Camera className="w-5 h-5 text-white" />
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Mobile native camera fallback button */}
+                    <button
+                      type="button"
+                      onClick={handleTriggerNativeCamera}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl cursor-pointer transition-colors border border-slate-700"
+                      title="Open full native phone camera app"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="hidden sm:inline">Phone app</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

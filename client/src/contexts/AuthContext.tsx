@@ -55,7 +55,7 @@ export const PRESET_USERS: Record<UserRole, UserSession> = {
     name: "Asha Rao",
     role: "patient",
     email: "asha.rao@example.in",
-    phone: "+91 98450 12345",
+    phone: "98450 12345",
     badge: "Verified Patient #AS-8821",
     avatar: "👩‍💼",
     location: "Defence Colony, Indiranagar, Bengaluru"
