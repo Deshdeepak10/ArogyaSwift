@@ -1,62 +1,56 @@
-# 🛠️ ArogyaSwift — Technical Requirement Document (TRD)
+# ArogyaSwift Technical Specification
 
-**Document Version:** 1.0.0  
-**Target Environment:** Node.js v18+, Express.js, Vite 7, Vercel Serverless Functions  
+**Version:** 1.0.0  
+**Target Environment:** Node.js 20+, Express, Vite 7, Vercel Serverless Functions, Supabase PostgreSQL
 
 ---
 
-## 1. System Architecture Overview
+## 1. System Architecture
 
-ArogyaSwift is designed as a hybrid Single Page Application (SPA) with serverless micro-services and an Express backend layer.
+ArogyaSwift is built as a Single Page Application (SPA) with a serverless API layer on Vercel and an Express service.
 
 ```
 +-------------------------------------------------------------------+
 |                           CLIENT LAYER                            |
 |  React 19 SPA (Vite) + Tailwind CSS v4 + Wouter Router + Zod      |
+|  Mapbox GL (WebGL 3D engine) + OpenStreetMap zero-cost fallback   |
 +-------------------------------------------------------------------+
                                   │
                          HTTP REST API Requests
                                   │
 +-------------------------------------------------------------------+
 |                        SECURITY & RATE LIMITER                    |
-|  Multi-Tier Rate Limiter Middleware (Exponential Backoff Delay)   |
-|  Zod Strict Schema Validation (Payload Sanitization)              |
+|  Multi-tier Rate Limiter (Exponential backoff delay)              |
+|  Zod Strict Schema Validation (Payload sanitization)              |
 +-------------------------------------------------------------------+
                                   │
 +-------------------------------------------------------------------+
 |                     EXPRESS BACKEND SERVER                        |
-|  server/app.ts (Shared Express App Instance)                      |
-|  server/routes.ts (API Routes & Revenue Calculator Logic)        |
+|  server/app.ts (Shared Express application instance)              |
+|  server/routes.ts (API endpoints & business logic)               |
+|  server/db/index.ts (Supabase PostgreSQL connection pool)         |
 +-------------------------------------------------------------------+
          │                                         │
-  Vercel Serverless Deployment             Standalone Node Server
-  api/index.ts                              server/index.ts
+  Vercel Serverless Function              Standalone Node Server
+  api/index.js                            server/index.ts
 ```
 
 ---
 
-## 2. API Endpoint Specifications
+## 2. API Endpoints
 
-### 2.1 Public Health & Status Endpoints
+### 2.1 Health Checks
 - **GET `/api/public/health`**
-  - **Limiter**: Public Limiter (Moderate rate limit).
-  - **Response**: `{ status: "ok", service: "ArogyaSwift Platform", timestamp: ISOString }`
+  - **Limiter**: Public rate limiter.
+  - **Response**: `{ status: "ok", service: "ArogyaSwift Platform", timestamp: ISOString, database: { configured: boolean, connected: boolean } }`
+- **GET `/api/db/health`**
+  - **Limiter**: Public rate limiter.
+  - **Response**: PostgreSQL live timestamp, version string, and connection pool status.
 
-### 2.2 Authentication Endpoints
-- **POST `/api/auth/login`**
-  - **Limiter**: Auth Limiter (Stricter per-IP & per-account with exponential backoff delay `2s`, `4s`, `8s`...).
-  - **Validation**: `AuthCustomLoginSchema`
-  - **Request Body**:
-    ```json
-    {
-      "customName": "Sarah Chen",
-      "customEmail": "sarah.chen@example.com",
-      "password": "Password123",
-      "selectedRole": "patient"
-    }
-    ```
-  - **Response**: `{ status: "success", user: UserSession }`
-
+### 2.2 Authentication
+- **POST `/api/auth/google/verify`**
+  - **Description**: Verifies Google Identity Services ID token, creates or updates the user profile in Supabase PostgreSQL, and issues session claims.
+  - **Request Body**: `{ "credential": "<google_jwt_token>" }`
 - **POST `/api/auth/phone-signup`**
   - **Validation**: `PhoneSignupSchema`
   - **Request Body**:
@@ -69,52 +63,41 @@ ArogyaSwift is designed as a hybrid Single Page Application (SPA) with serverles
       "locationPin": "Shipra Sun City, Indirapuram, Ghaziabad"
     }
     ```
-
 - **POST `/api/auth/verify-otp`**
   - **Validation**: `VerifyOtpSchema`
-  - **Request Body**: `{ "phone": "9876543210", "otp": "7392" }`
+  - **Rule**: Strictly 4-digit numeric OTP code (`/^\d{4}$/`).
+  - **Request Body**: `{ "phone": "9876543210", "enteredOtp": "7392" }`
+- **POST `/api/auth/login`**
+  - **Validation**: `AuthCustomLoginSchema`
+  - **Limiter**: Auth rate limiter with exponential backoff (`2s`, `4s`, `8s`...).
 
-### 2.3 Pharmacy Operations Endpoints
+### 2.3 Pharmacy Operations
 - **POST `/api/pharmacy/register`**
   - **Validation**: `PharmacyRegisterSchema`
-  - **Request Body**:
-    ```json
-    {
-      "ownerName": "Pharm. Priya Nair",
-      "shopName": "Apollo Express Pharmacy (Raj Nagar, Ghaziabad)",
-      "licenseNo": "UP-2021-00921",
-      "category": "Cold-Chain Certified Retail",
-      "address": "Kavi Nagar Main Rd, Ghaziabad",
-      "phone": "9876511223",
-      "email": "hub.ghaziabad@apollopharmacy.in"
-    }
-    ```
+  - **Fields**: `ownerName`, `shopName`, `licenseNo` (CDSCO format), `category`, `address`, `phone` (10 digits), `email`, `coldChainReady`.
+- **POST `/api/pharmacy/quote`**
+  - **Validation**: `PharmacyQuotationSubmitSchema`
+  - **Fields**: `requestId`, `pharmacyId`, `quotedItems`, `estimatedDeliveryMins`.
 
-### 2.4 Revenue Calculator Endpoint
+### 2.4 Revenue Calculator
 - **POST `/api/calculator/unit-economics`**
-  - **Limiter**: Authenticated User Limiter.
+  - **Limiter**: Authenticated user limiter.
   - **Validation**: `RevenueCalculatorSchema`
   - **Request Body**: `{ "dailyOrders": 100, "avgOrderValue": 450, "commissionPercent": 18, "deliveryFee": 35 }`
 
 ---
 
-## 3. Data Schemas & Validation Contracts (`shared/schemas.ts`)
+## 3. Data Validation Contracts (`shared/schemas.ts`)
 
-### Zod Validation Rules:
-1. `AuthCustomLoginSchema`:
-   - `customName`: 2–100 chars.
-   - `customEmail`: Valid email string, max 255 chars.
-   - `password`: min 6 chars, max 100 chars.
-   - `selectedRole`: enum `["patient", "pharmacy", "rider"]`.
-2. `PhoneSignupSchema`:
-   - `phone`: Exactly 10 digits (`^\d{10}$`).
-   - `role`: enum `["patient", "rider"]`.
-3. `PharmacyRegisterSchema`:
-   - `licenseNo`: Must match format `/^[a-zA-Z0-9\s\-/]+$/`.
+Zod schemas enforce all API input contracts:
+- `AuthCustomLoginSchema`: Validates name (2-100 characters), email, password (min 6 characters), and role enum (`patient`, `pharmacy`, `rider`, `admin`).
+- `PhoneSignupSchema`: Enforces exactly 10 digits for Indian mobile numbers (`^\d{10}$`).
+- `VerifyOtpSchema`: Enforces exactly 4 numeric digits for verification OTPs (`^\d{4}$`).
+- `PharmacyRegisterSchema`: Validates alphanumeric license IDs (`/^[a-zA-Z0-9-]+$/`) and 10-digit phone numbers.
 
 ---
 
-## 4. Rate Limiter Security Implementation (`server/middleware/rateLimiter.ts`)
+## 4. Rate Limiting (`server/middleware/rateLimiter.ts`)
 
 ```typescript
 export interface RateLimitConfig {
@@ -127,31 +110,25 @@ export interface RateLimitConfig {
 }
 ```
 
-### Rate Limiter Tiers:
-1. **Auth Limiter**:
-   - Environment variables: `RATE_LIMIT_AUTH_WINDOW_MS`, `RATE_LIMIT_AUTH_MAX_REQUESTS`.
-   - Exponential backoff delay calculation: `delay = min(baseDelayMs * 2^(attempts - 1), maxDelayMs)`.
-   - Returns HTTP `429 Too Many Requests` with `Retry-After` header when threshold exceeded.
-2. **Public Limiter**:
-   - Environment variables: `RATE_LIMIT_PUBLIC_WINDOW_MS`, `RATE_LIMIT_PUBLIC_MAX_REQUESTS`.
-3. **Authenticated User Limiter**:
-   - Environment variables: `RATE_LIMIT_USER_WINDOW_MS`, `RATE_LIMIT_USER_MAX_REQUESTS`.
+- **Auth Limiter**: Exponential backoff per IP and per account identity (`delay = min(baseDelayMs * 2^(attempts - 1), maxDelayMs)`). Exceeded thresholds return HTTP 429 with `Retry-After`.
+- **Public Limiter**: Protects public endpoints from automated scraping.
+- **User Limiter**: Protects authenticated user endpoints against excessive load.
 
 ---
 
-## 5. Map & Geolocation Integration (`client/src/components/Map.tsx`)
+## 5. Map & Geolocation Engine (`client/src/components/Map.tsx`)
 
-1. **Google Maps Proxy API**: Loads Google Maps JS API script via `MAPS_PROXY_URL`.
-2. **Device Geolocation**: Uses `navigator.geolocation.getCurrentPosition(...)` to retrieve physical device coordinates.
-3. **Google Embed Map Fallback**: When API keys are unconfigured, automatically renders an embedded Google Map `iframe`:
-   `https://maps.google.com/maps?q=${lat},${lng}&z=${zoom}&output=embed`
+1. **Mapbox GL (Primary)**: Uses `mapbox-gl` with WebGL 3D rendering, custom animated rider pins, pharmacy hubs, customer drop-off points, and route polylines.
+2. **OpenStreetMap Fallback**: When `VITE_MAPBOX_TOKEN` is unset or empty, the component falls back to zero-cost OpenStreetMap raster tiles without breaking map interactivity.
+3. **HTML5 Geolocation**: Uses `navigator.geolocation.getCurrentPosition` for device coordinates.
 
 ---
 
-## 6. Vercel Serverless Build Specification
+## 6. Build and Deployment
 
-1. **`vercel.json`**:
-   - `buildCommand`: `npm run build`
-   - `outputDirectory`: `dist/public`
-   - `rewrites`: API traffic to `/api/index.ts`, SPA routes to `/index.html`.
-2. **Serverless Entry Point**: `api/index.ts` exports `app` from `server/app.ts`.
+- **`vercel.json`**:
+  - `buildCommand`: `npm run build`
+  - `outputDirectory`: `dist/public`
+  - `rewrites`: Maps `/api/(.*)` to `/api/index.js` and all other paths to `/index.html`.
+- **Bundle Strategy**: `npm run build` runs `vite build`, builds `server/index.ts` to `dist/index.js`, and uses `esbuild` to bundle `api/index.ts` into a self-contained `api/index.js` module for Vercel Serverless Functions.
+- **Database**: Supabase PostgreSQL with SSL connection pooling (`aws-0-ap-south-1.pooler.supabase.com:6543`).

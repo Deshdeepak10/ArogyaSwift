@@ -1,59 +1,63 @@
-# 💊 ArogyaSwift — Hyperlocal Medicine Delivery & Cold-Chain Logistics Blueprint
+# ArogyaSwift
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![React 19](https://img.shields.io/badge/React-19.2.1-blue.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-7.1.9-646CFF.svg)](https://vitejs.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](https://www.typescriptlang.org/)
-[![Vercel Deployed](https://img.shields.io/badge/Vercel-Deployed-black.svg)](https://vercel.com/)
+[![Vercel Deployed](https://img.shields.io/badge/Vercel-Live-black.svg)](https://arogyaswift.vercel.app)
 
-**ArogyaSwift** is a state-of-the-art, hyperlocal 10-to-30 minute medicine delivery platform blueprint built for CDSCO-compliant pharmaceutical fulfillment, cold-chain temperature telemetry monitoring (2°C–8°C), and multi-role operations across Patients, Licensed Pharmacy Partners, and Express Delivery Riders.
+ArogyaSwift is a hyperlocal medicine delivery platform for 10-to-30 minute prescription fulfillment. It coordinates patients, licensed neighborhood pharmacies, and express riders with real-time cold-chain temperature monitoring (2°C–8°C), 4-digit doorstep delivery OTP handoffs, and CDSCO regulatory compliance.
 
----
-
-## 🌟 Key Features
-
-### 👩‍💼 Patient & Healthcare Consumer Portal
-- **AI OCR e-Prescription Scanner**: Instant optical character recognition for paper/digital prescriptions with salt-level generic alternative suggestions.
-- **Daily Dosage Cabinet & Medication Alarm**: Log pending doses, record daily compliance, and manage active prescriptions.
-- **Live Order & Temperature Tracking**: Monitor express delivery ETA, real-time rider GPS position, and cold-storage box temperatures.
-- **Device GPS Location Acquisition**: One-click HTML5 geolocation to auto-detect device coordinates in Ghaziabad and surrounding regions.
-
-### 🏥 Licensed Pharmacy Partner Portal
-- **Pharmacist Clinical Audit**: Multi-check verification workflow for prescription validity, dosage accuracy, and doctor registration.
-- **Digital Pharmacist Approval Stamp**: Secure cryptographic verification stamp (#0x9F82) for audit trails.
-- **Cold Storage Compliance Log**: Real-time 2°C–8°C insulated refrigeration telemetry logging.
-- **ERP Stock Synchronization**: 100% real-time inventory matching across local fulfillment hubs.
-
-### 🏍️ Express Delivery Rider Portal
-- **Google Maps & Vector Navigation**: Switch between Google Satellite view and high-tech vector navigation maps.
-- **Duty Status Control**: One-click Online/Offline shift toggle.
-- **OTP Verification Handoff**: Secure 4-digit PIN verification to ensure medicine handoff to the authorized recipient.
-
-### 🔒 Enterprise Security & Rate Limiting
-- **Multi-Tier Configurable Rate Limiter**: Stricter limits on auth routes (`/api/auth/*`) with exponential backoff delay (`2s`, `4s`, `8s`...), per-IP & per-account rate tracking, and configurable thresholds.
-- **Strict Zod Input Validation**: Complete schema enforcement rejecting malformed payload types, lengths, and formats.
+Live Demo: [https://arogyaswift.vercel.app](https://arogyaswift.vercel.app)
 
 ---
 
-## 🛠️ Technology Stack
+## Core Capabilities
+
+### Patient Portal
+- **Prescription Upload & Salt-Level Generic Matching**: Upload doctor prescriptions with automatic identification of active salts and cost-saving generic alternatives.
+- **Daily Dosage Cabinet**: Track daily prescription schedules, log dosage compliance, and view medication history.
+- **Real-Time Delivery & Cold-Chain Tracking**: Live Mapbox tracking showing rider GPS coordinates, ETA, and insulated storage box temperatures.
+- **Device GPS Geolocation**: One-click browser geolocation to locate nearby pharmacies and set delivery drop points.
+
+### Licensed Pharmacy Partner Portal
+- **Prescription Review & Audit Queue**: Clinical verification workflow for registered pharmacists to inspect doctor credentials, dosage schedules, and drug schedules before dispatch.
+- **Digital Audit Stamp**: Pharmacist approval recording license numbers and timestamps for regulatory compliance.
+- **Cold Storage Logging**: Live telemetry verification ensuring temperature-sensitive medications (insulin, vaccines) remain within 2°C–8°C.
+- **Local Hub Inventory Matching**: Real-time stock matching across neighborhood pharmacy partners.
+
+### Express Rider Portal
+- **Mapbox 3D Navigation**: WebGL vector maps with animated scooter tracking, turn-by-turn route geometry, and OpenStreetMap fallback.
+- **Shift & Duty Toggle**: One-touch online/offline availability switch.
+- **Doorstep OTP Handoff**: Strict 4-digit PIN verification confirming handoff to the designated recipient.
+
+### Security & Resilience
+- **Google OAuth 2.0 & GIS**: One-click Google Sign-In with server-side token verification and automatic profile synchronization with Supabase.
+- **Supabase PostgreSQL Database**: 16 relational tables with Row Level Security (RLS) covering user profiles, pharmacies, inventory, orders, and audit logs.
+- **Multi-Tier Rate Limiting**: Exponential backoff protection on authentication routes, IP rate tracking, and payload limits.
+- **Zod Schema Validation**: Strict input validation across all customer, pharmacy, and delivery endpoints.
+
+---
+
+## Technology Stack
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend Framework** | React 19, TypeScript, Vite 7 |
-| **Styling** | Tailwind CSS v4, Vanilla Utility Classes, Lucide Icons |
-| **Routing** | Wouter 3.7 |
-| **State & Auth** | React Context API, Strict Zod Schemas |
-| **Backend & API** | Express.js, TypeScript (ESM) |
-| **Map Integration** | Google Maps JavaScript API, Device Geolocation |
-| **Deployment** | Vercel Serverless Functions & Static Hosting |
+| **Frontend** | React 19, TypeScript, Vite 7, Tailwind CSS |
+| **Routing** | Wouter |
+| **Mapping Engine** | Mapbox GL JS (WebGL 3D) with OpenStreetMap fallback |
+| **Authentication** | Google OAuth 2.0 (Google Identity Services) + Express verification |
+| **Database** | PostgreSQL on Supabase (ap-south-1 Mumbai) via `pg` connection pool |
+| **Backend API** | Express.js running as Node server and Vercel Serverless Functions |
+| **Deployment** | Vercel (Edge CDN + Serverless API) and Cloudflare Pages compatible |
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **pnpm** / **npm**: Package Manager
+- **Node.js**: v18.0.0 or higher (v20+ recommended)
+- **npm**: v10+
 
 ### Installation & Setup
 
@@ -65,9 +69,7 @@
 
 2. **Install dependencies**:
    ```bash
-   pnpm install
-   # or
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 3. **Configure Environment Variables**:
@@ -75,64 +77,69 @@
    ```bash
    cp .env.example .env
    ```
-   *Required variables:*
-   - `PORT`: Server port (Default: `3000`)
-   - `VITE_FRONTEND_FORGE_API_KEY`: Google Maps Proxy API Key
+   *Key variables required for full functionality:*
+   - `DATABASE_URL`: Supabase PostgreSQL connection string
+   - `VITE_SUPABASE_URL`: Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY`: Supabase anon public API key
+   - `VITE_GOOGLE_CLIENT_ID`: Google Cloud OAuth 2.0 Web Client ID
+   - `GOOGLE_CLIENT_SECRET`: Google OAuth Client Secret
+   - `VITE_MAPBOX_TOKEN`: *(Optional)* Mapbox public access token (`pk.eyJ...`)
 
-4. **Launch Development Server**:
+4. **Run Development Server**:
    ```bash
    npm run dev
    ```
-   Open `http://localhost:3000` in your browser.
+   Open `http://localhost:3000` (or `http://localhost:5173`) in your browser.
 
-5. **Build for Production**:
+5. **Typecheck & Production Build**:
    ```bash
+   npm run check
    npm run build
    ```
 
 ---
 
-## 📐 Project Structure
+## Project Structure
 
 ```
 ArogyaSwift/
-├── api/                   # Vercel Serverless Entry Points
+├── api/                   # Vercel serverless function entry points
 │   └── index.ts
-├── client/                # React 19 Frontend SPA
+├── client/                # React 19 frontend
 │   ├── index.html
 │   └── src/
-│       ├── components/    # Reusable UI Components (Map, LiveTrackingMap, ProfileModal, etc.)
-│       ├── contexts/      # AuthContext, ThemeContext
-│       ├── pages/         # LoginHome, MedicineMVP, MedicineDelivery, NotFound
+│       ├── components/    # Map (Mapbox GL), LiveTrackingMap, AuthModal, etc.
+│       ├── contexts/      # AuthContext (Google OAuth), OrderContext, ThemeContext
+│       ├── pages/         # Patient, Pharmacy, Rider, Admin portals, Home, MVP
+│       ├── lib/           # googleAuth, supabase, utils
 │       ├── main.tsx
 │       └── App.tsx
-├── server/                # Express Backend Server
-│   ├── middleware/        # Multi-Tier Rate Limiter Middleware
-│   ├── app.ts             # Express App Instance
-│   ├── index.ts           # Standalone Node HTTP Server
-│   └── routes.ts          # Validated API Routes
-├── shared/                # Shared Types & Zod Schemas
-│   ├── config.ts
+├── server/                # Express backend
+│   ├── db/                # PostgreSQL connection pool and schema.sql
+│   ├── middleware/        # Rate limiters and role authentication
+│   ├── app.ts             # Express application configuration
+│   ├── index.ts           # Standalone HTTP server entry
+│   └── routes.ts          # API endpoints and Google token verification
+├── shared/                # Shared Zod schemas, constants, and configs
 │   └── schemas.ts
-├── PROJECT_REQUIREMENTS.md
-├── TECHNICAL_REQUIREMENTS.md
-├── vercel.json
+├── vercel.json            # Vercel deployment configuration
+├── wrangler.toml          # Cloudflare Pages configuration
 └── package.json
 ```
 
 ---
 
-## 🌐 Vercel Deployment
+## Deployment
 
-This project includes pre-configured Vercel deployment files (`vercel.json` and `api/index.ts`).
+The application is deployed on Vercel at [https://arogyaswift.vercel.app](https://arogyaswift.vercel.app).
 
-### Deploy via Vercel CLI:
+For manual deployment using Vercel CLI:
 ```bash
 npx vercel --prod
 ```
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
