@@ -1,6 +1,7 @@
 import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 import path from "node:path";
 import { defineConfig } from "vite";
 
@@ -10,7 +11,8 @@ const isDev = process.env.NODE_ENV !== "production";
 const plugins = [
   react(),
   tailwindcss(),
-  ...(isDev ? [jsxLocPlugin()] : [])
+  ...(isDev ? [jsxLocPlugin()] : []),
+  basicSsl()
 ];
 
 export default defineConfig({
