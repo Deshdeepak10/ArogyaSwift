@@ -11,12 +11,13 @@ import {
   Store,
   Bike,
   Shield,
-  FileText
+  LogIn,
+  UserPlus
 } from "lucide-react";
 
 export default function LoginHome() {
   const [, setLocation] = useLocation();
-  const { loginAsRole, setIsAuthModalOpen } = useAuth();
+  const { loginAsRole, openRoleAuth } = useAuth();
 
   const handleRoleNavigation = (role: "patient" | "pharmacy" | "delivery" | "admin" | "customer") => {
     if (role === "patient" || role === "customer") {
@@ -48,7 +49,7 @@ export default function LoginHome() {
           <div className="max-w-3xl relative z-10 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase bg-emerald-800/80 border border-emerald-600/40 text-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Pilot · Indiranagar, Bengaluru • Google Authentication Verified
+              Pilot · Indiranagar, Bengaluru • Real-time Notifications Enabled
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight text-white">
@@ -71,10 +72,11 @@ export default function LoginHome() {
 
               {/* Subordinated Partner Login Action */}
               <button
-                onClick={() => setIsAuthModalOpen(true)}
+                onClick={() => openRoleAuth("pharmacy", "login")}
                 className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-semibold text-emerald-100 hover:text-white hover:bg-emerald-800/60 transition-all text-sm border border-emerald-700/60 cursor-pointer"
               >
-                <span>Chemist & Partner Sign In</span>
+                <Store className="w-4 h-4" />
+                <span>Chemist Sign In / Register</span>
               </button>
             </div>
           </div>
@@ -117,100 +119,140 @@ export default function LoginHome() {
         <div className="space-y-6">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-              Explore the platform by role
+              User Portals & Dedicated Accounts
             </h2>
             <p className="text-sm text-slate-600 mt-1">
-              Switch roles anytime from the top bar to test each workflow.
+              Select your role to sign in, create a dedicated account, or test the live workflow.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Patient Role Card */}
+            {/* 1. Patient Role Card */}
             <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col justify-between shadow-xs hover:shadow-md hover:border-emerald-300 transition-all group">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                   <User className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Patient</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">Patient Portal</h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                    Upload a prescription or search medicines, receive quotes from nearby chemists, and track delivery with a secure OTP.
+                    Upload prescription, verify extracted medicine names, receive quotes from nearby chemists, and track drops with delivery OTP.
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleRoleNavigation("patient")}
-                className="mt-6 w-full py-2.5 px-4 rounded-lg bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-700 font-semibold text-xs border border-slate-200/80 group-hover:border-emerald-600 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <span>Open Patient View</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+
+              <div className="mt-6 space-y-2">
+                <button
+                  onClick={() => openRoleAuth("patient", "login")}
+                  className="w-full py-2.5 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Patient Sign In / Register</span>
+                </button>
+                <button
+                  onClick={() => handleRoleNavigation("patient")}
+                  className="w-full py-2 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>Open Patient View</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
-            {/* Pharmacy Role Card */}
+            {/* 2. Pharmacy Role Card */}
             <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col justify-between shadow-xs hover:shadow-md hover:border-emerald-300 transition-all group">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center group-hover:bg-teal-700 group-hover:text-white transition-colors">
                   <Store className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Pharmacy</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">Pharmacy Chemist</h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                    Review incoming prescriptions, verify stock, quote prices, and dispatch via in-house rider or shared partner.
+                    Licensed chemists review prescriptions, verify medicine inventory, submit itemised price quotes, and hand over sealed bags.
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleRoleNavigation("pharmacy")}
-                className="mt-6 w-full py-2.5 px-4 rounded-lg bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-700 font-semibold text-xs border border-slate-200/80 group-hover:border-emerald-600 transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>Open Pharmacy Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+
+              <div className="mt-6 space-y-2">
+                <button
+                  onClick={() => openRoleAuth("pharmacy", "login")}
+                  className="w-full py-2.5 px-3 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Chemist Sign In / Register</span>
+                </button>
+                <button
+                  onClick={() => handleRoleNavigation("pharmacy")}
+                  className="w-full py-2 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>Open Pharmacy Dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
-            {/* Delivery Partner Role Card */}
+            {/* 3. Delivery Partner Role Card */}
             <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col justify-between shadow-xs hover:shadow-md hover:border-emerald-300 transition-all group">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
                   <Bike className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Delivery partner</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">Delivery Partner</h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                    Route multi-pickup runs across Indiranagar, verify order bags, and complete contact-free drops.
+                    Riders aggregate multi-pickup stops across Indiranagar, verify tamper-evident bags via pickup OTP, and complete doorstep delivery.
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleRoleNavigation("delivery")}
-                className="mt-6 w-full py-2.5 px-4 rounded-lg bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-700 font-semibold text-xs border border-slate-200/80 group-hover:border-emerald-600 transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>Open Delivery App</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+
+              <div className="mt-6 space-y-2">
+                <button
+                  onClick={() => openRoleAuth("delivery", "login")}
+                  className="w-full py-2.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Rider Sign In / Register</span>
+                </button>
+                <button
+                  onClick={() => handleRoleNavigation("delivery")}
+                  className="w-full py-2 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>Open Delivery App</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
-            {/* Admin Role Card */}
+            {/* 4. Admin Role Card */}
             <div className="bg-white rounded-xl border border-slate-200/80 p-6 flex flex-col justify-between shadow-xs hover:shadow-md hover:border-emerald-300 transition-all group">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-colors">
                   <Shield className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Admin</h3>
+                  <h3 className="font-bold text-slate-900 text-lg">Admin Console</h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                    Live operations oversight, pharmacy verification roster, partner dispatch, and compliance tracking.
+                    Live operational oversight, cold-chain temperature telemetry, CDSCO drug license auditing, and centralized fleet dispatch.
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleRoleNavigation("admin")}
-                className="mt-6 w-full py-2.5 px-4 rounded-lg bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-700 font-semibold text-xs border border-slate-200/80 group-hover:border-emerald-600 transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>Open Admin Console</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+
+              <div className="mt-6 space-y-2">
+                <button
+                  onClick={() => openRoleAuth("admin", "login")}
+                  className="w-full py-2.5 px-3 rounded-lg bg-slate-900 hover:bg-black text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Admin Console Access</span>
+                </button>
+                <button
+                  onClick={() => handleRoleNavigation("admin")}
+                  className="w-full py-2 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <span>Open Admin View</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

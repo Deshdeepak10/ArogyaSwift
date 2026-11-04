@@ -5,9 +5,18 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
+import { OrderProvider } from "./contexts/OrderContext";
+
+// Auth Modals
 import { AuthModal } from "./components/AuthModal";
 import { PharmacyRegisterModal } from "./components/PharmacyRegisterModal";
 import { PhoneSignupModal } from "./components/PhoneSignupModal";
+import { PatientAuthModal } from "./components/auth/PatientAuthModal";
+import { PharmacyAuthModal } from "./components/auth/PharmacyAuthModal";
+import { DeliveryAuthModal } from "./components/auth/DeliveryAuthModal";
+import { AdminAuthModal } from "./components/auth/AdminAuthModal";
+
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
 import CustomerPortal from "./pages/CustomerPortal";
 import PharmacyPortal from "./pages/PharmacyPortal";
@@ -17,7 +26,6 @@ import MedicineMVP from "./pages/MedicineMVP";
 import LoginHome from "./pages/LoginHome";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
-import { OrderProvider } from "./contexts/OrderContext";
 
 function Router() {
   return (
@@ -45,16 +53,26 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <AuthProvider>
-          <OrderProvider>
-            <TooltipProvider>
-              <Toaster />
-              <AuthModal />
-              <PharmacyRegisterModal />
-              <PhoneSignupModal />
-              <CookieConsentBanner />
-              <Router />
-            </TooltipProvider>
-          </OrderProvider>
+          <NotificationProvider>
+            <OrderProvider>
+              <TooltipProvider>
+                <Toaster />
+                {/* Legacy Modals */}
+                <AuthModal />
+                <PharmacyRegisterModal />
+                <PhoneSignupModal />
+
+                {/* Separate Role Registration & Login Modals */}
+                <PatientAuthModal />
+                <PharmacyAuthModal />
+                <DeliveryAuthModal />
+                <AdminAuthModal />
+
+                <CookieConsentBanner />
+                <Router />
+              </TooltipProvider>
+            </OrderProvider>
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

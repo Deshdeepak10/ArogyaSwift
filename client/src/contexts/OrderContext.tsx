@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useNotifications } from "./NotificationContext";
 
 export type OrderStatus =
   | "in_review"
@@ -338,6 +339,7 @@ function normalizeOrderOtps(order: any): PlatformOrder {
 }
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
+  const { addNotification } = useNotifications();
   const [orders, setOrders] = useState<PlatformOrder[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
@@ -448,6 +450,26 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     };
 
     setOrders((prev) => [newOrder, ...prev]);
+
+    addNotification({
+      title: "New Medicine Request",
+      message: `Patient ${fullName} (${area}) sent ${formattedItems.length || 1} medicine item(s) for verification (#${newId}).`,
+      role: "pharmacy",
+      type: "order_status",
+      orderId: newId,
+      priority: isUrgent ? "urgent" : "high",
+      actionUrl: "/pharmacy"
+    });
+
+    addNotification({
+      title: "Order Placed",
+      message: `Order #${newId} recorded for ${fullName} in ${area}. Sent to local chemists.`,
+      role: "admin",
+      type: "system_alert",
+      orderId: newId,
+      actionUrl: "/admin"
+    });
+
     return newId;
   };
 
@@ -483,6 +505,25 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return order;
       })
     );
+
+    addNotification({
+      title: "Price Quotation Ready",
+      message: `Chemist quoted ₹${total > 0 ? total + 40 : 187} for order #${orderId}. Review items and confirm order.`,
+      role: "patient",
+      type: "quote_ready",
+      orderId,
+      priority: "high",
+      actionUrl: "/patient"
+    });
+
+    addNotification({
+      title: "Quotation Generated",
+      message: `Order #${orderId} quoted by chemist. Awaiting patient confirmation.`,
+      role: "admin",
+      type: "system_alert",
+      orderId,
+      actionUrl: "/admin"
+    });
   };
 
   // Patient Confirms Quoted Order
@@ -501,6 +542,35 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return order;
       })
     );
+
+    addNotification({
+      title: "Order Confirmed by Patient",
+      message: `Patient confirmed order #${orderId} (${paymentMethod}). Please pack and seal parcel for rider pickup.`,
+      role: "pharmacy",
+      type: "order_status",
+      orderId,
+      priority: "urgent",
+      actionUrl: "/pharmacy"
+    });
+
+    addNotification({
+      title: "New Delivery Available",
+      message: `Order #${orderId} is confirmed and ready for dispatch in Indiranagar.`,
+      role: "rider",
+      type: "rider_dispatch",
+      orderId,
+      priority: "high",
+      actionUrl: "/delivery"
+    });
+
+    addNotification({
+      title: "Order Confirmed",
+      message: `Order #${orderId} confirmed with ${paymentMethod}. Dispatch workflow activated.`,
+      role: "admin",
+      type: "order_status",
+      orderId,
+      actionUrl: "/admin"
+    });
   };
 
   // Patient Declines Quoted Order
@@ -559,6 +629,34 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return order;
       })
     );
+
+    addNotification({
+      title: "New Delivery Assigned",
+      message: `Assigned to order #${orderId}. Proceed to pharmacy counter for parcel pickup.`,
+      role: "rider",
+      type: "rider_dispatch",
+      orderId,
+      priority: "high",
+      actionUrl: "/delivery"
+    });
+
+    addNotification({
+      title: "Delivery Partner Assigned",
+      message: `${riderName} is assigned to collect and deliver your medicines for #${orderId}.`,
+      role: "patient",
+      type: "rider_dispatch",
+      orderId,
+      actionUrl: "/patient"
+    });
+
+    addNotification({
+      title: "Rider Dispatched",
+      message: `Order #${orderId} assigned to ${riderName} (${riderType === "own" ? "Store In-House" : "Shared Partner"}).`,
+      role: "admin",
+      type: "system_alert",
+      orderId,
+      actionUrl: "/admin"
+    });
   };
 
   // 4. Delivery Rider Accepts Delivery Run
@@ -615,6 +713,27 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return order;
       })
     );
+    if (success) {
+      addNotification({
+        title: "Parcel Handed Over to Rider",
+        message: `Pickup verified for order #${orderId}. Parcel is in transit with tamper-seal.`,
+        role: "pharmacy",
+        type: "pickup_ready",
+        orderId,
+        actionUrl: "/pharmacy"
+      });
+
+      addNotification({
+        title: "Medicines Picked Up!",
+        message: `Your medicine parcel for #${orderId} is picked up and en route. Keep your 4-digit OTP ready for delivery.`,
+        role: "patient",
+        type: "order_status",
+        orderId,
+        priority: "high",
+        actionUrl: "/patient"
+      });
+    }
+
     return success;
   };
 
@@ -723,6 +842,45 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         return order;
       })
     );
+    if (success) {
+      addNotification({
+        title: "Order Delivered Successfully!",
+        message: `Order #${orderId} delivered at doorstep. Verified with customer OTP. Stay healthy!`,
+        role: "patient",
+        type: "delivery_complete",
+        orderId,
+        priority: "high",
+        actionUrl: "/patient"
+      });
+
+      addNotification({
+        title: "Delivery Handover Complete",
+        message: `Order #${orderId} was safely handed over to patient.`,
+        role: "pharmacy",
+        type: "delivery_complete",
+        orderId,
+        actionUrl: "/pharmacy"
+      });
+
+      addNotification({
+        title: "Delivery Payout Settled",
+        message: `Delivery completed for #${orderId}. Earnings credited to rider wallet.`,
+        role: "rider",
+        type: "delivery_complete",
+        orderId,
+        actionUrl: "/delivery"
+      });
+
+      addNotification({
+        title: "Order Completed",
+        message: `Order #${orderId} delivered in Indiranagar. All compliance checks passed.`,
+        role: "admin",
+        type: "delivery_complete",
+        orderId,
+        actionUrl: "/admin"
+      });
+    }
+
     return success;
   };
 
