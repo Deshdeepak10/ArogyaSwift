@@ -47,9 +47,9 @@ export function PharmacyAuthModal() {
 
   const isOpen = activeRoleModal === "pharmacy";
 
-  // Login form state
-  const [loginShopName, setLoginShopName] = useState("Shree Ganesh Medicals");
-  const [loginLicense, setLoginLicense] = useState("KA-BLR-20B-1142");
+  // Login form state: clean real inputs (no fake preset data)
+  const [loginShopName, setLoginShopName] = useState("");
+  const [loginLicense, setLoginLicense] = useState("");
 
   // Registration form state
   const [ownerName, setOwnerName] = useState("");
@@ -235,48 +235,6 @@ export function PharmacyAuthModal() {
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
               </Button>
             </form>
-
-            <div className="relative flex py-1 items-center">
-              <div className="grow border-t border-slate-200" />
-              <span className="shrink mx-2 text-[10px] text-slate-400 uppercase font-semibold">
-                Quick Preset Chemist Accounts
-              </span>
-              <div className="grow border-t border-slate-200" />
-            </div>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  loginPharmacyUser("Shree Ganesh Medicals", "KA-BLR-20B-1142");
-                  toast.success("Loaded Shree Ganesh Medicals (Indiranagar 12th Main)");
-                  setLocation("/pharmacy");
-                }}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition-all flex items-center justify-between cursor-pointer"
-              >
-                <div>
-                  <div className="font-bold text-slate-800">Shree Ganesh Medicals</div>
-                  <div className="text-[10px] text-slate-500">12th Main, Indiranagar • DL #KA-BLR-20B-1142</div>
-                </div>
-                <Badge className="bg-emerald-100 text-emerald-800 border-none text-[10px]">Active Partner</Badge>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  loginPharmacyUser("Apollo Pharmacy - Express Hub", "KA-BLR-2021-00921");
-                  toast.success("Loaded Apollo Pharmacy Express Hub (CMH Road)");
-                  setLocation("/pharmacy");
-                }}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition-all flex items-center justify-between cursor-pointer"
-              >
-                <div>
-                  <div className="font-bold text-slate-800">Apollo Pharmacy Express</div>
-                  <div className="text-[10px] text-slate-500">CMH Road, Indiranagar • Cold-Chain Hub</div>
-                </div>
-                <Badge className="bg-teal-100 text-teal-800 border-none text-[10px]">Cold-Chain</Badge>
-              </button>
-            </div>
           </TabsContent>
 
           {/* TAB 2: REGISTER PHARMACY */}

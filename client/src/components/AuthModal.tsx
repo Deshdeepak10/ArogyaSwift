@@ -99,33 +99,33 @@ export function AuthModal() {
 
   // Patient Login Form State
   const [patientData, setPatientData] = useState({
-    name: "Sarah Chen",
-    phone: "9876543210",
-    email: "sarah.chen@example.com",
-    address: "Shipra Sun City, Indirapuram, Ghaziabad",
-    otp: "7392"
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    otp: ""
   });
 
   // Pharmacy Login Form State
   const [pharmacyData, setPharmacyData] = useState({
-    ownerName: "Pharm. Priya Nair",
-    shopName: "Apollo Express Pharmacy (Raj Nagar, Ghaziabad)",
-    licenseNo: "UP-2021-00921",
-    category: "Cold-Chain Certified Retail",
-    address: "Kavi Nagar Main Rd, Ghaziabad",
-    phone: "9876511223",
-    email: "hub.ghaziabad@apollopharmacy.in",
-    coldChainVerified: true
+    ownerName: "",
+    shopName: "",
+    licenseNo: "",
+    category: "Verified Retail Pharmacy",
+    address: "",
+    phone: "",
+    email: "",
+    coldChainVerified: false
   });
 
   // Rider Login Form State
   const [riderData, setRiderData] = useState({
-    name: "Vikram Singh",
-    phone: "9876599887",
-    email: "vikram.rider@arogyaswift.in",
-    vehicleType: "EV Scooter (Cold Storage Box)",
-    vehicleNo: "UP-14-EV-8821",
-    location: "Ghaziabad Central Zone",
+    name: "",
+    phone: "",
+    email: "",
+    vehicleType: "Electric Scooter",
+    vehicleNo: "",
+    location: "",
     equipmentVerified: true
   });
 

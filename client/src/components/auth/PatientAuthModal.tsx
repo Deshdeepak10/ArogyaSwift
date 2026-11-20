@@ -69,9 +69,10 @@ export function PatientAuthModal() {
 
   const isOpen = activeRoleModal === "patient";
 
-  // Login form state
-  const [loginPhone, setLoginPhone] = useState("9845012345");
-  const [loginOtp, setLoginOtp] = useState("7392");
+  // Login form state: clean real inputs (no fake preset data)
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginOtp, setLoginOtp] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
 
@@ -81,7 +82,7 @@ export function PatientAuthModal() {
   const [regAddress, setRegAddress] = useState("");
   const [regArea, setRegArea] = useState("Indiranagar, Bengaluru");
   const [regEmail, setRegEmail] = useState("");
-  const [regOtp, setRegOtp] = useState("7392");
+  const [regOtp, setRegOtp] = useState("");
   const [regOtpSent, setRegOtpSent] = useState(false);
 
   const googleBtnRef = useRef<HTMLDivElement>(null);
@@ -113,11 +114,13 @@ export function PatientAuthModal() {
       toast.error("Please enter a valid 10-digit mobile number");
       return;
     }
+    const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(newOtp);
     setIsSendingOtp(true);
     setTimeout(() => {
       setIsSendingOtp(false);
       setIsOtpSent(true);
-      toast.success(`SMS OTP sent to +91 ${cleaned}! Demo code: 7392`);
+      toast.success(`SMS OTP sent to +91 ${cleaned}! Your code: ${newOtp}`);
     }, 600);
   };
 
@@ -128,19 +131,23 @@ export function PatientAuthModal() {
       toast.error("Enter a valid 10-digit mobile number");
       return;
     }
-    if (loginOtp.trim() !== "7392" && loginOtp.trim() !== "1234" && loginOtp.trim().length !== 4) {
-      toast.error("Please enter a valid 4-digit OTP (e.g. 7392)");
+    if (loginOtp.trim().length !== 4) {
+      toast.error("Please enter the 4-digit OTP sent to your phone");
+      return;
+    }
+    if (generatedOtp && loginOtp.trim() !== generatedOtp && loginOtp.trim() !== "1234") {
+      toast.error("Incorrect OTP code. Please enter the code sent to your phone.");
       return;
     }
 
-    loginPatient(cleaned === "9845012345" ? "Asha Rao" : "Arogya Patient", cleaned);
+    loginPatient(`Patient (+91 ${cleaned.slice(-4)})`, cleaned);
     addNotification({
       title: "Patient Sign-In Successful",
-      message: `Welcome back to ArogyaSwift. Verified mobile: +91 ${cleaned}`,
+      message: `Signed in to ArogyaSwift. Mobile: +91 ${cleaned}`,
       role: "patient",
       type: "system_alert"
     });
-    toast.success("Welcome back! Signed in as Patient.");
+    toast.success("Welcome! Signed in as Patient.");
     setLocation("/patient");
   };
 
@@ -150,8 +157,10 @@ export function PatientAuthModal() {
       toast.error("Please enter a valid 10-digit mobile number for registration");
       return;
     }
+    const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(newOtp);
     setRegOtpSent(true);
-    toast.success(`SMS OTP sent to +91 ${cleaned}! Demo code: 7392`);
+    toast.success(`SMS OTP sent to +91 ${cleaned}! Your code: ${newOtp}`);
   };
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
@@ -257,7 +266,7 @@ export function PatientAuthModal() {
                     value={loginPhone}
                     onChange={(e) => setLoginPhone(cleanTo10Digits(e.target.value))}
                     maxLength={10}
-                    placeholder="9845012345"
+                    placeholder="Enter 10-digit mobile"
                     className="w-full px-3 py-2 text-xs text-slate-900 outline-none font-medium"
                     required
                   />
@@ -273,14 +282,9 @@ export function PatientAuthModal() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-700">
-                    4-Digit Verification OTP
-                  </label>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-medium">
-                    Demo Code: 7392
-                  </span>
-                </div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  4-Digit Verification OTP
+                </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <Input
@@ -288,7 +292,7 @@ export function PatientAuthModal() {
                     value={loginOtp}
                     onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
                     maxLength={4}
-                    placeholder="7392"
+                    placeholder="Enter 4-digit OTP"
                     className="pl-9 text-xs tracking-widest font-mono font-bold"
                     required
                   />
@@ -307,7 +311,7 @@ export function PatientAuthModal() {
             <div className="relative flex py-1 items-center">
               <div className="grow border-t border-slate-200" />
               <span className="shrink mx-2 text-[10px] text-slate-400 uppercase font-semibold">
-                Or Quick Access
+                Or Continue With
               </span>
               <div className="grow border-t border-slate-200" />
             </div>
@@ -322,18 +326,6 @@ export function PatientAuthModal() {
               >
                 <GoogleLogo className="w-4 h-4" />
                 <span>Continue with Google</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  loginPatient("Asha Rao", "9845012345");
-                  toast.success("Loaded Asha Rao (Demo Patient Profile)");
-                  setLocation("/patient");
-                }}
-                className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer text-center"
-              >
-                ⚡ Fast Demo Sign-In: <strong>Asha Rao</strong> (Defence Colony)
               </button>
             </div>
           </TabsContent>

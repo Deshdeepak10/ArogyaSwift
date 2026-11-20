@@ -43,60 +43,62 @@ export interface UserSession {
   isGoogleUser?: boolean;
 }
 
+export const GUEST_USER: UserSession = {
+  id: "guest",
+  name: "Guest",
+  role: "patient",
+  email: "",
+  phone: "",
+  badge: "Unregistered Guest",
+  avatar: "👤",
+  location: ""
+};
+
 export const PRESET_USERS: Record<UserRole, UserSession> = {
   customer: {
-    id: "u-cust-101",
-    name: "Aarav Sharma",
+    id: "guest",
+    name: "Customer",
     role: "customer",
-    email: "aarav.sharma@example.in",
-    phone: "9876543210",
-    badge: "Verified Customer #AS-8821",
+    email: "",
+    phone: "",
+    badge: "Verified Customer",
     avatar: "👤",
-    location: "Indiranagar, Bengaluru"
+    location: ""
   },
-  patient: {
-    id: "u-patient-101",
-    name: "Asha Rao",
-    role: "patient",
-    email: "asha.rao@example.in",
-    phone: "9845012345",
-    badge: "Verified Patient #AS-8821",
-    avatar: "👩‍💼",
-    location: "124, 4th Cross, Defence Colony, Indiranagar, Bengaluru"
-  },
+  patient: GUEST_USER,
   pharmacy: {
-    id: "u-pharmacy-202",
-    name: "Shree Ganesh Medicals",
+    id: "u-pharmacy-default",
+    name: "Local Chemist Partner",
     role: "pharmacy",
     email: "partner@arogyaswift.in",
-    phone: "9876511223",
-    badge: "Verified Pharmacy #KA-BLR-20B-1142",
+    phone: "",
+    badge: "Licensed Pharmacy",
     avatar: "🏥",
-    licenseNo: "KA-BLR-20B-1142",
-    shopName: "Shree Ganesh Medicals (Indiranagar)",
-    location: "12th Main Rd, Indiranagar, Bengaluru"
+    licenseNo: "",
+    shopName: "Local Pharmacy",
+    location: ""
   },
   rider: {
-    id: "u-rider-303",
-    name: "Ravi Kumar",
+    id: "u-rider-default",
+    name: "Delivery Fleet Partner",
     role: "rider",
     email: "rider@arogyaswift.in",
-    phone: "9876599887",
-    badge: "Verified Delivery Partner #AS-R4402",
+    phone: "",
+    badge: "Delivery Partner",
     avatar: "🏍️",
-    location: "Indiranagar Zone, Bengaluru",
-    vehicleType: "Electric Scooter (Cold-Chain Ready)",
-    vehicleNo: "KA-03-EV-4402"
+    location: "",
+    vehicleType: "Delivery Vehicle",
+    vehicleNo: ""
   },
   admin: {
-    id: "u-admin-404",
-    name: "Control Center Admin",
+    id: "u-admin-default",
+    name: "Operations Admin",
     role: "admin",
     email: "admin@arogyaswift.in",
-    phone: "9811122334",
-    badge: "Platform SuperAdmin #AS-HQ",
+    phone: "",
+    badge: "Platform Admin",
     avatar: "🛡️",
-    location: "ArogyaSwift HQ - Operations Center",
+    location: "ArogyaSwift Operations Center",
     department: "Platform Control Center"
   }
 };
@@ -152,7 +154,7 @@ const GOOGLE_SESSION_KEY = "arogya_google_profile";
 const USER_SESSION_KEY = "arogya_active_user_session_v2";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserSession>(PRESET_USERS.patient);
+  const [user, setUser] = useState<UserSession>(GUEST_USER);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [googleUser, setGoogleUser] = useState<GoogleUserProfile | null>(null);
   const [isGoogleReady, setIsGoogleReady] = useState(isGoogleAuthConfigured());
@@ -220,14 +222,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsGoogleReady(isGoogleAuthConfigured());
 
     try {
+      localStorage.removeItem("arogya_demo_session");
       const storedGoogle = localStorage.getItem(GOOGLE_SESSION_KEY);
       const savedUser = localStorage.getItem(USER_SESSION_KEY);
       const savedRole = (localStorage.getItem(ROLE_STORAGE_KEY) as UserRole) || "patient";
 
       if (savedUser) {
         const parsedUser = JSON.parse(savedUser) as UserSession;
-        setUser(parsedUser);
-        setIsAuthenticated(true);
+        if (parsedUser && parsedUser.id && parsedUser.id !== "guest") {
+          setUser(parsedUser);
+          setIsAuthenticated(true);
+        } else {
+          setUser(GUEST_USER);
+          setIsAuthenticated(false);
+        }
       } else if (storedGoogle) {
         const parsed = JSON.parse(storedGoogle) as GoogleUserProfile;
         setGoogleUser(parsed);
@@ -238,17 +246,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: parsed.email,
           badge: `Google Verified • ${savedRole.toUpperCase()}`,
           avatar: parsed.photoURL || (savedRole === "pharmacy" ? "🏥" : savedRole === "rider" ? "🏍️" : savedRole === "admin" ? "🛡️" : "👤"),
-          location: "Indiranagar, Bengaluru",
+          location: "",
           isGoogleUser: true
         };
         setUser(resolvedUser);
         setIsAuthenticated(true);
-      } else if (localStorage.getItem("arogya_demo_session") && savedRole) {
-        setUser(PRESET_USERS[savedRole] || PRESET_USERS.patient);
-        setIsAuthenticated(true);
+      } else {
+        setUser(GUEST_USER);
+        setIsAuthenticated(false);
       }
     } catch (e) {
       console.warn("Could not restore session:", e);
+      setUser(GUEST_USER);
+      setIsAuthenticated(false);
     }
   }, []);
 
@@ -285,13 +295,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
     const newSession: UserSession = {
       id: `u-patient-${cleanPhone || Date.now()}`,
-      name: name || "Asha Rao",
+      name: name || (cleanPhone ? `Patient (+91 ${cleanPhone.slice(-4)})` : "Verified Patient"),
       role: "patient",
       email: `${cleanPhone}@patient.arogyaswift.in`,
       phone: cleanPhone,
-      badge: `Verified Patient #${cleanPhone.slice(-4) || "8821"}`,
+      badge: `Verified Patient #${cleanPhone.slice(-4) || "0001"}`,
       avatar: "👩‍💼",
-      location: address ? `${address}${area ? `, ${area}` : ""}` : "Defence Colony, Indiranagar, Bengaluru"
+      location: address ? `${address}${area ? `, ${area}` : ""}` : ""
     };
     saveActiveSession(newSession);
   };
@@ -320,12 +330,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name: shopName,
       role: "pharmacy",
       email: email || "chemist@arogyaswift.in",
-      phone: "9876511223",
-      badge: `Verified Pharmacy #${licenseNo || "KA-BLR-20B-1142"}`,
+      phone: "",
+      badge: `Verified Pharmacy #${licenseNo || "CDSCO"}`,
       avatar: "🏥",
       shopName: shopName,
       licenseNo: licenseNo,
-      location: "Indiranagar, Bengaluru"
+      location: ""
     };
     saveActiveSession(newSession);
   };
@@ -381,14 +391,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
     const newSession: UserSession = {
       id: `u-rider-${cleanPhone || Date.now()}`,
-      name: name || "Ravi Kumar",
+      name: name || (cleanPhone ? `Delivery Partner (+91 ${cleanPhone.slice(-4)})` : "Delivery Partner"),
       role: "rider",
       email: `${cleanPhone}@rider.arogyaswift.in`,
       phone: cleanPhone,
-      badge: `Active Fleet Partner #AS-R${cleanPhone.slice(-4) || "4402"}`,
+      badge: `Active Fleet Partner #AS-R${cleanPhone.slice(-4) || "0001"}`,
       avatar: "🏍️",
-      location: "Indiranagar Zone, Bengaluru",
-      vehicleType: vehicleType || "Electric Scooter (Cold-Chain Ready)"
+      location: "",
+      vehicleType: vehicleType || "Delivery Vehicle (Cold Storage)"
     };
     saveActiveSession(newSession);
   };
@@ -423,10 +433,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginAdminUser = (name: string, email: string, pin: string, roleTitle?: string) => {
     const newSession: UserSession = {
       id: `u-admin-${Date.now()}`,
-      name: name || "Control Center Admin",
+      name: name || "Operations Admin",
       role: "admin",
       email: email || "admin@arogyaswift.in",
-      phone: "9811122334",
+      phone: "",
       badge: roleTitle ? `${roleTitle} #AS-HQ` : "Platform SuperAdmin #AS-HQ",
       avatar: "🛡️",
       location: "ArogyaSwift HQ - Operations Center",
@@ -564,7 +574,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setGoogleUser(null);
     setIsAuthenticated(false);
-    setUser(PRESET_USERS.patient);
+    setUser(GUEST_USER);
   };
 
   return (

@@ -35,8 +35,8 @@ export function AdminAuthModal() {
   const isOpen = activeRoleModal === "admin";
 
   // Login form state
-  const [adminEmail, setAdminEmail] = useState("admin@arogyaswift.in");
-  const [adminPin, setAdminPin] = useState("AS-ADMIN-2026");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPin, setAdminPin] = useState("");
   const [roleTitle, setRoleTitle] = useState("Platform SuperAdmin");
 
   // Onboard staff state
@@ -48,11 +48,15 @@ export function AdminAuthModal() {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminEmail.trim()) {
-      toast.error("Please enter admin email");
+      toast.error("Please enter official admin email");
+      return;
+    }
+    if (!adminPin.trim()) {
+      toast.error("Please enter admin security passkey");
       return;
     }
     if (adminPin.trim() !== "AS-ADMIN-2026" && adminPin.trim() !== "admin" && adminPin.trim() !== "1234") {
-      toast.error("Invalid Admin Passkey. Demo Passkey: AS-ADMIN-2026");
+      toast.error("Invalid Admin Passkey. Access denied.");
       return;
     }
 
@@ -157,7 +161,7 @@ export function AdminAuthModal() {
                     type="email"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="admin@arogyaswift.in"
+                    placeholder="e.g. admin@yourdomain.com"
                     className="pl-9 text-xs"
                     required
                   />
@@ -165,21 +169,16 @@ export function AdminAuthModal() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-700">
-                    Security Access Passkey
-                  </label>
-                  <span className="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
-                    Passkey: AS-ADMIN-2026
-                  </span>
-                </div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Security Access Passkey
+                </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <Input
                     type="password"
                     value={adminPin}
                     onChange={(e) => setAdminPin(e.target.value)}
-                    placeholder="AS-ADMIN-2026"
+                    placeholder="Enter security passkey"
                     className="pl-9 text-xs font-mono font-bold"
                     required
                   />
@@ -210,18 +209,6 @@ export function AdminAuthModal() {
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
               </Button>
             </form>
-
-            <button
-              type="button"
-              onClick={() => {
-                loginAdminUser("Operations Control Admin", "admin@arogyaswift.in", "AS-ADMIN-2026", "Platform SuperAdmin");
-                toast.success("Loaded Platform SuperAdmin Session");
-                setLocation("/admin");
-              }}
-              className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer text-center"
-            >
-              ⚡ Fast Demo Access: <strong>SuperAdmin #AS-HQ</strong>
-            </button>
           </TabsContent>
 
           {/* TAB 2: ONBOARD STAFF */}

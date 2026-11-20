@@ -50,11 +50,11 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
-    phone: user.phone || "+91 98765 43210",
-    location: user.location || "Flat 402, Shipra Sun City, Indirapuram, Ghaziabad",
-    licenseNo: user.licenseNo || "UP-2021-00921",
-    vehicleType: user.vehicleType || "ArogyaSwift EV Scooter (Insulated Cold Box)",
-    shopName: user.shopName || "Apollo Express Pharmacy (Raj Nagar, Ghaziabad)",
+    phone: user.phone || "",
+    location: user.location || "",
+    licenseNo: user.licenseNo || "",
+    vehicleType: user.vehicleType || "",
+    shopName: user.shopName || "",
   });
 
   const handleSave = () => {

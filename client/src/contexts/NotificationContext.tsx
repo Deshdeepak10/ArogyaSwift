@@ -24,9 +24,17 @@ export interface AppNotification {
   actionUrl?: string;
 }
 
+export interface NotificationSettings {
+  soundEnabled: boolean;
+  toastsEnabled: boolean;
+}
+
 interface NotificationContextType {
   notifications: AppNotification[];
   unreadCount: number;
+  settings: NotificationSettings;
+  setSoundEnabled: (enabled: boolean) => void;
+  setToastsEnabled: (enabled: boolean) => void;
   getRoleNotifications: (role: UserRole | string) => AppNotification[];
   getRoleUnreadCount: (role: UserRole | string) => number;
   addNotification: (
@@ -41,110 +49,13 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-const STORAGE_KEY = "arogyaswift_notifications_v1";
+const STORAGE_KEY = "arogyaswift_notifications_v3";
+const SETTINGS_KEY = "arogyaswift_notif_settings_v1";
 
-const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: "notif-seed-1",
-    title: "Price Quotation Ready",
-    message: "Chemist at Shree Ganesh Medicals quoted ₹187 for order #AS-1043. Please confirm to proceed.",
-    role: "patient",
-    type: "quote_ready",
-    orderId: "AS-1043",
-    timestamp: "5 mins ago",
-    createdAt: Date.now() - 5 * 60 * 1000,
-    read: false,
-    priority: "high",
-    actionUrl: "/patient"
-  },
-  {
-    id: "notif-seed-2",
-    title: "Rider En Route to Store",
-    message: "Ravi Kumar (Ekart Shared Partner) is picking up parcel 2 of 2 for order #AS-1044.",
-    role: "patient",
-    type: "rider_dispatch",
-    orderId: "AS-1044",
-    timestamp: "12 mins ago",
-    createdAt: Date.now() - 12 * 60 * 1000,
-    read: true,
-    actionUrl: "/patient"
-  },
-  {
-    id: "notif-seed-3",
-    title: "New Prescription Request",
-    message: "Patient Vikram Mehta submitted 1 medicine for verification (#AS-1041, HAL 2nd Stage).",
-    role: "pharmacy",
-    type: "order_status",
-    orderId: "AS-1041",
-    timestamp: "8 mins ago",
-    createdAt: Date.now() - 8 * 60 * 1000,
-    read: false,
-    priority: "urgent",
-    actionUrl: "/pharmacy"
-  },
-  {
-    id: "notif-seed-4",
-    title: "Pickup OTP Handover Needed",
-    message: "Rider Ravi Kumar arrived for parcel handover #AS-1044. Verify pickup OTP 5823.",
-    role: "pharmacy",
-    type: "pickup_ready",
-    orderId: "AS-1044",
-    timestamp: "18 mins ago",
-    createdAt: Date.now() - 18 * 60 * 1000,
-    read: true,
-    actionUrl: "/pharmacy"
-  },
-  {
-    id: "notif-seed-5",
-    title: "New Multi-Stop Run Available",
-    message: "Order #AS-1044 ready for pickup across 2 pharmacies in Indiranagar. Payout ₹45.",
-    role: "rider",
-    type: "rider_dispatch",
-    orderId: "AS-1044",
-    timestamp: "14 mins ago",
-    createdAt: Date.now() - 14 * 60 * 1000,
-    read: false,
-    priority: "high",
-    actionUrl: "/delivery"
-  },
-  {
-    id: "notif-seed-6",
-    title: "Delivery Payout Settled",
-    message: "Order #AS-1042 completed to Defence Colony. Verified with customer OTP 9102. +₹40 added.",
-    role: "rider",
-    type: "delivery_complete",
-    orderId: "AS-1042",
-    timestamp: "45 mins ago",
-    createdAt: Date.now() - 45 * 60 * 1000,
-    read: true,
-    actionUrl: "/delivery"
-  },
-  {
-    id: "notif-seed-7",
-    title: "Platform Cold-Chain Alert",
-    message: "Indiranagar Zone: 4 active temperature-controlled vaccine batches in transit. All sensor readings normal (3.8°C).",
-    role: "admin",
-    type: "system_alert",
-    timestamp: "20 mins ago",
-    createdAt: Date.now() - 20 * 60 * 1000,
-    read: false,
-    priority: "normal",
-    actionUrl: "/admin"
-  },
-  {
-    id: "notif-seed-8",
-    title: "Chemist Verification Audited",
-    message: "Drug License #KA-BLR-20B-1142 for Shree Ganesh Medicals CDSCO status verified.",
-    role: "admin",
-    type: "system_alert",
-    timestamp: "1 hour ago",
-    createdAt: Date.now() - 60 * 60 * 1000,
-    read: true,
-    actionUrl: "/admin"
-  }
-];
+// Zero fake notifications: start with a clean real state
+const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
-// Play gentle Web Audio API dual-tone chime
+// Gentle Web Audio API dual-tone chime
 function playNotificationChime() {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -176,17 +87,39 @@ function playNotificationChime() {
     osc2.start(now + 0.12);
     osc2.stop(now + 0.45);
   } catch (err) {
-    // Audio context may be restricted by autoplay policy before user gesture
+    // Autoplay restrictions or unavailable audio device
   }
 }
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  // Purge legacy fake seed data from localStorage on first run
+  useEffect(() => {
+    try {
+      localStorage.removeItem("arogyaswift_notifications_v1");
+      localStorage.removeItem("arogyaswift_notifications_v2");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const [settings, setSettings] = useState<NotificationSettings>(() => {
+    try {
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore
+    }
+    return { soundEnabled: true, toastsEnabled: true };
+  });
+
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
@@ -196,7 +129,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return INITIAL_NOTIFICATIONS;
   });
 
-  // Sync to localStorage
+  // Sync notifications to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
@@ -204,6 +137,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // ignore
     }
   }, [notifications]);
+
+  // Sync settings to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch {
+      // ignore
+    }
+  }, [settings]);
 
   // Inter-tab sync listener
   useEffect(() => {
@@ -223,6 +165,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  const setSoundEnabled = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({ ...prev, soundEnabled: enabled }));
+  }, []);
+
+  const setToastsEnabled = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({ ...prev, toastsEnabled: enabled }));
+  }, []);
+
   const addNotification = useCallback(
     (
       notif: Omit<AppNotification, "id" | "createdAt" | "read" | "timestamp"> & {
@@ -239,14 +189,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
       setNotifications((prev) => [newNotification, ...prev]);
 
-      // Sound and toast feedback
-      playNotificationChime();
-      toast(notif.title, {
-        description: notif.message,
-        duration: 4000
-      });
+      // Sound feedback if enabled
+      if (settings.soundEnabled) {
+        playNotificationChime();
+      }
+
+      // Toast feedback if enabled
+      if (settings.toastsEnabled) {
+        toast(notif.title, {
+          description: notif.message,
+          duration: 4000
+        });
+      }
     },
-    []
+    [settings]
   );
 
   const markAsRead = useCallback((id: string) => {
@@ -302,6 +258,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       value={{
         notifications,
         unreadCount,
+        settings,
+        setSoundEnabled,
+        setToastsEnabled,
         getRoleNotifications,
         getRoleUnreadCount,
         addNotification,
@@ -322,4 +281,3 @@ export function useNotifications() {
   }
   return context;
 }
-

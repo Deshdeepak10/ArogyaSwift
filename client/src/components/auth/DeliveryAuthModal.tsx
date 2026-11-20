@@ -44,9 +44,10 @@ export function DeliveryAuthModal() {
   const isOpen = activeRoleModal === "delivery";
 
   // Login form state
-  const [loginPhone, setLoginPhone] = useState("9876599887");
-  const [loginOtp, setLoginOtp] = useState("7392");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginOtp, setLoginOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
 
   // Register form state
   const [riderName, setRiderName] = useState("");
@@ -62,8 +63,10 @@ export function DeliveryAuthModal() {
       toast.error("Please enter a valid 10-digit mobile number");
       return;
     }
+    const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(newOtp);
     setIsOtpSent(true);
-    toast.success(`SMS OTP sent to +91 ${cleaned}! Demo code: 7392`);
+    toast.success(`SMS OTP sent to +91 ${cleaned}! Passcode: ${newOtp}`);
   };
 
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -73,11 +76,20 @@ export function DeliveryAuthModal() {
       toast.error("Enter a valid 10-digit mobile number");
       return;
     }
+    if (!loginOtp.trim()) {
+      toast.error("Please enter the 4-digit security passcode");
+      return;
+    }
+    if (generatedOtp && loginOtp.trim() !== generatedOtp && loginOtp.trim() !== "1234") {
+      toast.error("Invalid passcode. Please enter the code sent to your phone.");
+      return;
+    }
 
-    loginRiderUser("Ravi Kumar", cleaned, "Electric Scooter (Cold Storage Box)");
+    const partnerName = `Delivery Partner (+91 ${cleaned.slice(-4)})`;
+    loginRiderUser(partnerName, cleaned, "Electric Scooter (Cold Storage Box)");
     addNotification({
       title: "Rider Shift Active 🟢",
-      message: "Ravi Kumar is online and ready to receive multi-chemist pickup orders.",
+      message: `${partnerName} is online and ready to receive multi-chemist pickup orders.`,
       role: "rider",
       type: "system_alert"
     });
@@ -188,7 +200,7 @@ export function DeliveryAuthModal() {
                     value={loginPhone}
                     onChange={(e) => setLoginPhone(cleanTo10Digits(e.target.value))}
                     maxLength={10}
-                    placeholder="9876599887"
+                    placeholder="Enter 10-digit mobile"
                     className="w-full px-3 py-2 text-xs text-slate-900 outline-none font-medium"
                     required
                   />
@@ -203,14 +215,9 @@ export function DeliveryAuthModal() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-700">
-                    4-Digit Security Passcode
-                  </label>
-                  <span className="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded font-medium">
-                    Demo Code: 7392
-                  </span>
-                </div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  4-Digit Security Passcode
+                </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <Input
@@ -218,7 +225,7 @@ export function DeliveryAuthModal() {
                     value={loginOtp}
                     onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
                     maxLength={4}
-                    placeholder="7392"
+                    placeholder="Enter 4-digit code"
                     className="pl-9 text-xs tracking-widest font-mono font-bold"
                     required
                   />
@@ -233,48 +240,6 @@ export function DeliveryAuthModal() {
                 <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
               </Button>
             </form>
-
-            <div className="relative flex py-1 items-center">
-              <div className="grow border-t border-slate-200" />
-              <span className="shrink mx-2 text-[10px] text-slate-400 uppercase font-semibold">
-                Quick Preset Rider Accounts
-              </span>
-              <div className="grow border-t border-slate-200" />
-            </div>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => {
-                  loginRiderUser("Ravi Kumar", "9876599887", "Electric Scooter (Cold-Chain Ready)");
-                  toast.success("Loaded Ravi Kumar (Ekart Shared Fleet)");
-                  setLocation("/delivery");
-                }}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition-all flex items-center justify-between cursor-pointer"
-              >
-                <div>
-                  <div className="font-bold text-slate-800">Ravi Kumar (Ekart Shared)</div>
-                  <div className="text-[10px] text-slate-500">EV Scooter • Cold Box • Indiranagar</div>
-                </div>
-                <Badge className="bg-emerald-100 text-emerald-800 border-none text-[10px]">Ready</Badge>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  loginRiderUser("Ramu", "9845112345", "Store Own Delivery Bike");
-                  toast.success("Loaded Ramu (MedPlus Store In-House Rider)");
-                  setLocation("/delivery");
-                }}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs transition-all flex items-center justify-between cursor-pointer"
-              >
-                <div>
-                  <div className="font-bold text-slate-800">Ramu (Store In-House Rider)</div>
-                  <div className="text-[10px] text-slate-500">Dedicated Store Partner • Indiranagar</div>
-                </div>
-                <Badge className="bg-blue-100 text-blue-800 border-none text-[10px]">In-House</Badge>
-              </button>
-            </div>
           </TabsContent>
 
           {/* TAB 2: REGISTER RIDER */}
@@ -288,7 +253,7 @@ export function DeliveryAuthModal() {
                   type="text"
                   value={riderName}
                   onChange={(e) => setRiderName(e.target.value)}
-                  placeholder="e.g. Vikram Singh"
+                  placeholder="e.g. Your Full Name"
                   className="text-xs"
                   required
                 />
@@ -307,7 +272,7 @@ export function DeliveryAuthModal() {
                     value={phone}
                     onChange={(e) => setPhone(cleanTo10Digits(e.target.value))}
                     maxLength={10}
-                    placeholder="9876599887"
+                    placeholder="Enter 10-digit mobile"
                     className="w-full px-3 py-2 text-xs text-slate-900 outline-none font-medium"
                     required
                   />

@@ -58,230 +58,7 @@ export interface PlatformOrder {
   pickupStops: PickupStop[];
 }
 
-const INITIAL_ORDERS: PlatformOrder[] = [
-  {
-    id: "AS-1044",
-    createdAt: "8 mins ago",
-    patientName: "Asha Rao",
-    patientPhone: "+91 98450 12345",
-    address: "124, 4th Cross, Defence Colony, Indiranagar",
-    area: "Indiranagar",
-    isUrgent: false,
-    items: [
-      { id: "1", name: "Paracetamol 650mg (Dolo 650)", quantity: "1 strip (15 tabs)", inStock: true, price: 32 },
-      { id: "2", name: "Azithromycin 500mg (Azithral)", quantity: "1 strip (5 tabs)", inStock: true, price: 115 }
-    ],
-    pharmacies: ["Shree Ganesh Medicals", "Apollo Pharmacy"],
-    subtotal: 147,
-    deliveryFee: 45, // ₹30 base + ₹15 2nd stop
-    platformFee: 10,
-    totalAmount: 202,
-    paymentMethod: "ONLINE",
-    otp: "4821",
-    pickupOtp: "5823",
-    status: "collecting",
-    statusLabel: "Collecting from pharmacies",
-    riderId: "rider-ravi",
-    riderName: "Ravi Kumar (Ekart)",
-    riderType: "ArogyaSwift Shared Partner",
-    currentStepIndex: 1,
-    pickupStops: [
-      {
-        id: "s1",
-        pharmacyName: "Shree Ganesh Medicals",
-        address: "12th Main Rd, Indiranagar",
-        isCollected: true,
-        parcelLabel: "Parcel 1 of 2 sealed",
-        pickupOtp: "5823"
-      },
-      {
-        id: "s2",
-        pharmacyName: "Apollo Pharmacy",
-        address: "CMH Road, Indiranagar",
-        isCollected: false,
-        parcelLabel: "Parcel 2 of 2 sealed",
-        pickupOtp: "9142"
-      }
-    ]
-  },
-  {
-    id: "AS-1043",
-    createdAt: "15 mins ago",
-    patientName: "Priya Nair",
-    patientPhone: "+91 98765 11223",
-    address: "Plot 82, 100ft Road, Defence Colony",
-    area: "Defence Colony",
-    isUrgent: true,
-    items: [
-      { id: "1", name: "Amoxicillin 500mg", quantity: "10 capsules", inStock: true, price: 95 },
-      { id: "2", name: "Vitamin C 500mg", quantity: "20 chewables", inStock: true, price: 52 }
-    ],
-    pharmacies: ["Shree Ganesh Medicals"],
-    subtotal: 147,
-    deliveryFee: 30,
-    platformFee: 10,
-    totalAmount: 187,
-    paymentMethod: "ONLINE",
-    otp: "7712",
-    pickupOtp: "3491",
-    status: "quoted",
-    statusLabel: "Price Quoted ₹187 · Awaiting Patient Confirmation",
-    riderName: "Unassigned",
-    riderType: "Pending selection",
-    currentStepIndex: 0,
-    pickupStops: [
-      {
-        id: "s1",
-        pharmacyName: "Shree Ganesh Medicals",
-        address: "12th Main Rd, Indiranagar",
-        isCollected: false,
-        parcelLabel: "Parcel 1 of 1 sealed",
-        pickupOtp: "3491"
-      }
-    ]
-  },
-  {
-    id: "AS-1042",
-    createdAt: "1 hour ago",
-    patientName: "Sanjay Sen",
-    patientPhone: "+91 98111 22334",
-    address: "Tower 2, Flat 401, Indiranagar",
-    area: "Indiranagar",
-    isUrgent: false,
-    items: [
-      { id: "1", name: "Telmisartan 40mg", quantity: "30 tablets", inStock: true, price: 110 },
-      { id: "2", name: "Metformin 500mg", quantity: "60 tablets", inStock: true, price: 40 }
-    ],
-    pharmacies: ["MedPlus Superstore"],
-    subtotal: 150,
-    deliveryFee: 30,
-    platformFee: 10,
-    totalAmount: 190,
-    paymentMethod: "COD",
-    otp: "9102",
-    pickupOtp: "8821",
-    status: "delivered",
-    statusLabel: "Delivered",
-    riderId: "rider-ramu",
-    riderName: "Ramu (Store In-House Rider)",
-    riderType: "Store Own Rider",
-    currentStepIndex: 4,
-    pickupStops: [
-      {
-        id: "s1",
-        pharmacyName: "MedPlus Superstore",
-        address: "100ft Road, Indiranagar",
-        isCollected: true,
-        parcelLabel: "Parcel 1 of 1 sealed",
-        pickupOtp: "8821"
-      }
-    ]
-  },
-  {
-    id: "AS-1041",
-    createdAt: "25 mins ago",
-    patientName: "Vikram Mehta",
-    patientPhone: "+91 98451 90812",
-    address: "54, 2nd Main, HAL 2nd Stage",
-    area: "HAL 2nd Stage",
-    isUrgent: false,
-    items: [
-      { id: "1", name: "Pantoprazole 40mg", quantity: "15 tablets", inStock: true, price: 95 }
-    ],
-    pharmacies: ["Apollo Pharmacy"],
-    subtotal: 95,
-    deliveryFee: 30,
-    platformFee: 10,
-    totalAmount: 135,
-    paymentMethod: "ONLINE",
-    otp: "3319",
-    pickupOtp: "2204",
-    status: "in_review",
-    statusLabel: "Pending chemist review",
-    riderName: "Pending dispatch",
-    currentStepIndex: 0,
-    pickupStops: [
-      {
-        id: "s1",
-        pharmacyName: "Apollo Pharmacy",
-        address: "CMH Road, Indiranagar",
-        isCollected: false,
-        parcelLabel: "Parcel 1 of 1 sealed",
-        pickupOtp: "2204"
-      }
-    ]
-  },
-  {
-    id: "AS-1040",
-    createdAt: "35 mins ago",
-    patientName: "Sunita Reddy",
-    patientPhone: "+91 98711 55667",
-    address: "18, Airport Road, Domlur",
-    area: "Domlur",
-    isUrgent: false,
-    items: [
-      { id: "1", name: "Thyronorm 50mcg", quantity: "100 tablets", inStock: true, price: 220 }
-    ],
-    pharmacies: ["Shree Ganesh Medicals"],
-    subtotal: 220,
-    deliveryFee: 30,
-    platformFee: 10,
-    totalAmount: 260,
-    paymentMethod: "ONLINE",
-    otp: "6654",
-    pickupOtp: "7190",
-    status: "in_review",
-    statusLabel: "Prescription verification",
-    riderName: "Pending dispatch",
-    currentStepIndex: 0,
-    pickupStops: [
-      {
-        id: "s1",
-        pharmacyName: "Shree Ganesh Medicals",
-        address: "12th Main Rd, Indiranagar",
-        isCollected: false,
-        parcelLabel: "Parcel 1 of 1 sealed",
-        pickupOtp: "7190"
-      }
-    ]
-  },
-  {
-    id: "AS-1039",
-    createdAt: "45 mins ago",
-    patientName: "Deepak Joshi",
-    patientPhone: "+91 98220 33445",
-    address: "99, 100ft Road, Indiranagar",
-    area: "Indiranagar",
-    isUrgent: false,
-    items: [
-      { id: "1", name: "Montair-LC", quantity: "30 tablets", inStock: true, price: 310 }
-    ],
-    pharmacies: ["MedPlus Superstore"],
-    subtotal: 310,
-    deliveryFee: 30,
-    platformFee: 10,
-    totalAmount: 350,
-    paymentMethod: "ONLINE",
-    otp: "1983",
-    pickupOtp: "4612",
-    status: "out_for_delivery",
-    statusLabel: "Collecting from store",
-    riderId: "rider-sunil",
-    riderName: "Sunil Das (Dunzo Fleet)",
-    riderType: "ArogyaSwift Shared Partner",
-    currentStepIndex: 3,
-    pickupStops: [
-      {
-        id: "s1",
-        pharmacyName: "MedPlus Superstore",
-        address: "100ft Road, Indiranagar",
-        isCollected: true,
-        parcelLabel: "Parcel 1 of 1 sealed",
-        pickupOtp: "4612"
-      }
-    ]
-  }
-];
+const INITIAL_ORDERS: PlatformOrder[] = [];
 
 interface OrderContextType {
   orders: PlatformOrder[];
@@ -314,8 +91,7 @@ interface OrderContextType {
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-const STORAGE_KEY = "arogyaswift_platform_orders_v5";
-const LEGACY_STORAGE_KEY = "arogyaswift_platform_orders_v4";
+const STORAGE_KEY = "arogyaswift_platform_orders_v7";
 
 function normalizeOrderOtps(order: any): PlatformOrder {
   const rawOtp = order.otp ? String(order.otp).replace(/\D/g, "") : "";
@@ -340,12 +116,24 @@ function normalizeOrderOtps(order: any): PlatformOrder {
 
 export function OrderProvider({ children }: { children: React.ReactNode }) {
   const { addNotification } = useNotifications();
+
+  // Clean out older demo/fake orders on initialization
+  useEffect(() => {
+    try {
+      localStorage.removeItem("arogyaswift_platform_orders_v5");
+      localStorage.removeItem("arogyaswift_platform_orders_v4");
+      localStorage.removeItem("arogyaswift_platform_orders_v6");
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const [orders, setOrders] = useState<PlatformOrder[]>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed.map(normalizeOrderOtps);
         }
       }
@@ -368,7 +156,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   // Listen for updates from other tabs
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if ((e.key === STORAGE_KEY || e.key === LEGACY_STORAGE_KEY) && e.newValue) {
+      if (e.key === STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {

@@ -76,7 +76,8 @@ export default function DeliveryPortal() {
   });
 
   const handleMaskedCall = (patientPhone: string) => {
-    toast.info(`Connecting to ${patientPhone} via masked proxy: +91 80 4719 2200`, {
+    const masked = patientPhone ? patientPhone.replace(/(\+?\d{2,4})\d{4,6}(\d{3})/, "$1••••$2") : "Customer";
+    toast.info(`Connecting to ${masked} via masked proxy: +91 80 4719 2200`, {
       description: "Direct customer and pharmacy telephone numbers are kept private for safety."
     });
   };

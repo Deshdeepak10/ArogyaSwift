@@ -55,10 +55,10 @@ export default function CustomerPortal() {
   const [activeTab, setActiveTab] = useState<"new_request" | "my_orders">("new_request");
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<Record<string, "ONLINE" | "COD">>({});
 
-  // Form State
-  const [fullName, setFullName] = useState(user?.name || "Asha Rao");
-  const [mobile, setMobile] = useState(() => cleanTo10Digits(user?.phone) || "9845012345");
-  const [address, setAddress] = useState("124, 4th Cross, Defence Colony");
+  // Form State: clean real user inputs (zero fake preset data)
+  const [fullName, setFullName] = useState(user?.name && user.id !== "guest" ? user.name : "");
+  const [mobile, setMobile] = useState(() => (user?.phone && user.id !== "guest" ? cleanTo10Digits(user.phone) : ""));
+  const [address, setAddress] = useState(user?.location && user.id !== "guest" ? user.location : "");
   const [area, setArea] = useState("Indiranagar, Bengaluru");
   const [isUrgent, setIsUrgent] = useState(false);
   const [prescriptionFile, setPrescriptionFile] = useState<string | null>(null);
@@ -80,25 +80,27 @@ export default function CustomerPortal() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Sync state if user changes
+  // Sync state if user logs in or profile changes
   useEffect(() => {
-    if (user?.phone) {
+    if (user?.phone && user.id !== "guest") {
       setMobile(cleanTo10Digits(user.phone));
     }
-    if (user?.name) {
+    if (user?.name && user.id !== "guest") {
       setFullName(user.name);
     }
-  }, [user?.phone, user?.name]);
+    if (user?.location && user.id !== "guest") {
+      setAddress(user.location);
+    }
+  }, [user?.phone, user?.name, user?.location, user?.id]);
 
   // Anti-Spam Honeypot & Debounce State
   const [honeypot, setHoneypot] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Medicines List: default initialized with demo items when no prescription is uploaded
+  // Medicines List: start with a clean empty row for real medicine input
   const [medicines, setMedicines] = useState<MedicineRow[]>([
-    { id: "1", name: "Paracetamol 650mg (Dolo 650)", quantity: "1 strip (15 tablets)" },
-    { id: "2", name: "Azithromycin 500mg (Azithral)", quantity: "1 strip (5 tablets)" }
+    { id: "1", name: "", quantity: "1 strip" }
   ]);
 
   const handleAddMedicine = () => {
@@ -154,7 +156,7 @@ export default function CustomerPortal() {
     setPrescriptionFileSize(null);
     if (medicines.length === 0) {
       setMedicines([
-        { id: "1", name: "Paracetamol 650mg (Dolo 650)", quantity: "1 strip (15 tablets)" }
+        { id: "1", name: "", quantity: "1 strip" }
       ]);
     }
     toast.info("Prescription removed. You can enter medicine names manually.");
@@ -564,7 +566,7 @@ export default function CustomerPortal() {
                           setValidationErrors((prev) => ({ ...prev, fullName: "" }));
                         }
                       }}
-                      placeholder="e.g. Asha Rao"
+                      placeholder="e.g. Enter patient full name"
                       required
                       className={`w-full px-3 py-2 text-sm rounded-lg border bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors ${
                         validationErrors.fullName ? "border-rose-400 bg-rose-50/30" : "border-slate-200"
@@ -596,7 +598,7 @@ export default function CustomerPortal() {
                             setValidationErrors((prev) => ({ ...prev, mobile: "" }));
                           }
                         }}
-                        placeholder="98450 12345"
+                        placeholder="Enter 10-digit mobile"
                         maxLength={10}
                         inputMode="numeric"
                         pattern="[0-9]*"
