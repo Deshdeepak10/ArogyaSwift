@@ -15,7 +15,7 @@ const accountStore = new Map<string, RateLimitRecord>();
 /**
  * Clean up expired records periodically
  */
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
   ipStore.forEach((record, key) => {
     if (now > record.resetTime && now > record.nextAllowedTime) {
@@ -28,6 +28,10 @@ setInterval(() => {
     }
   });
 }, 60 * 1000);
+
+if (cleanupInterval.unref) {
+  cleanupInterval.unref();
+}
 
 /**
  * Helper to retrieve client IP

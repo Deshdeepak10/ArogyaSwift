@@ -77,17 +77,56 @@ export function createApp() {
         return res.redirect(301, `https://${host}${req.originalUrl || req.url || ""}`);
       }
 
-      // Strict Transport Security (HSTS) - 2 Years with SubDomains and Preload
-      res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+      // Strict Transport Security (HSTS) - Enabled only in genuine production environments
+      if (isProduction && req.secure) {
+        res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+        res.setHeader("Content-Security-Policy", "upgrade-insecure-requests");
+      }
+
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("X-Frame-Options", "SAMEORIGIN");
       res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-      res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
-      res.setHeader("Content-Security-Policy", "upgrade-insecure-requests");
+      res.setHeader("Permissions-Policy", "camera=(self), microphone=(), geolocation=(self)");
 
       next();
     });
   }
+
+  // 5. Restrictive CORS Policy (Zero Wildcard CORS)
+  const allowedOrigins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    process.env.APP_URL,
+    "https://arogyaswift.vercel.app",
+    "https://arogyaswift.in"
+  ].filter(Boolean);
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const origin = req.headers.origin;
+    if (origin && (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production")) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-role, x-user-id, x-auth-token");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
+  // 6. Structured Request Telemetry & Response Time Logging
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      if (req.path.startsWith("/api")) {
+        console.log(`[HTTP ${res.statusCode}] ${req.method} ${req.originalUrl || req.url} - ${duration}ms`);
+      }
+    });
+    next();
+  });
 
   // Parse JSON bodies with sensible payload size limit to prevent memory exhaustion DOS
   app.use(express.json({ limit: "2mb" }));

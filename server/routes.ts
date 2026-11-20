@@ -619,12 +619,29 @@ export function registerRoutes(app: Express): void {
     }
   );
 
-  // 9e. PUBLIC / CUSTOMER: Live Order Tracking Telemetry
+  // 9e. PUBLIC / CUSTOMER: Live Order Tracking Telemetry (Protected against IDOR & Data Leakage)
   app.get("/api/delivery/tracking/:orderId", publicRateLimiter, (req: Request, res: Response) => {
     const { orderId } = req.params;
+    if (!orderId || orderId.trim().length === 0) {
+      res.status(400).json({ error: "Missing order reference parameter" });
+      return;
+    }
+
     const task = Array.from(DELIVERY_TASKS_STORE.values()).find(
       (t) => t.orderId === orderId || t.orderNumber === orderId || t.id === orderId
-    ) || Array.from(DELIVERY_TASKS_STORE.values())[0];
+    );
+
+    // IDOR Protection: Never fall back to arbitrary customer records
+    if (!task) {
+      res.status(404).json({
+        error: "Tracking details not found",
+        message: `No active delivery run found for order reference: ${orderId}`,
+      });
+      return;
+    }
+
+    // Mask sensitive contact numbers to protect user privacy from unauthenticated scrapers
+    const maskPhone = (p?: string) => (p ? p.replace(/(\+?\d{2,4})\d{4,6}(\d{3})/, "$1••••$2") : "");
 
     res.json({
       success: true,
@@ -635,15 +652,18 @@ export function registerRoutes(app: Express): void {
         serviceLevel: task.serviceLevel,
         assignmentType: task.assignmentType,
         riderName: task.claimedByRiderName || "Assigned Fleet Partner",
-        riderPhone: "+91 98765 99887",
+        riderPhone: maskPhone("+91 98765 99887"),
         vehicleNo: "UP-14-EV-4412",
         requiresColdChain: task.requiresColdChain,
         currentTemperature: task.currentTemperature,
         temperaturesLog: task.temperaturesLog,
         tamperSealVerified: task.tamperSealVerified,
         deliveryOtp: task.deliveryOtp,
-        pickups: task.pickups,
-        dropoff: task.dropoff,
+        pickups: task.pickups.map((p) => ({ ...p, phone: maskPhone(p.phone) })),
+        dropoff: {
+          ...task.dropoff,
+          phone: maskPhone(task.dropoff.phone),
+        },
         estimatedDeliveryMinutes: task.serviceLevel === "express" ? 18 : 65,
       },
     });

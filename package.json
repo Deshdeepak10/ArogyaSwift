@@ -10,6 +10,7 @@
     "pages:build": "vite build",
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
+    "test": "tsx --test tests/security.test.mjs",
     "check": "tsc --noEmit",
     "format": "prettier --write ."
   },
