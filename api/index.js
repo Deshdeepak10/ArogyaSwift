@@ -14,7 +14,7 @@ var AuthCustomLoginSchema = z.object({
 });
 var PhoneSignupSchema = z.object({
   name: z.string().trim().min(2, "Full name must be at least 2 characters").max(100, "Full name cannot exceed 100 characters").regex(/^[a-zA-Z0-9\s.\-']+$/, "Full name contains invalid characters"),
-  phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+  phone: z.string().trim().min(7, "Phone number must be at least 7 digits").max(16, "Phone number cannot exceed 16 characters").regex(/^(\+)?[0-9\s-]{7,16}$/, "Phone number must be a valid international number"),
   role: z.enum(["customer", "patient", "rider"]),
   email: z.string().trim().email("Invalid email address format").max(255, "Email cannot exceed 255 characters").optional().or(z.literal("")),
   locationPin: z.string().trim().max(250, "Location address cannot exceed 250 characters").optional(),
@@ -22,7 +22,7 @@ var PhoneSignupSchema = z.object({
   drivingLicense: z.string().trim().max(50, "Driver license ID cannot exceed 50 characters").regex(/^[a-zA-Z0-9-]*$/, "Driver license ID contains invalid characters").optional()
 });
 var VerifyOtpSchema = z.object({
-  phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+  phone: z.string().trim().min(7, "Phone number must be at least 7 digits").max(16, "Phone number cannot exceed 16 characters").regex(/^(\+)?[0-9\s-]{7,16}$/, "Phone number must be a valid international number"),
   enteredOtp: z.string().trim().regex(/^\d{4}$/, "OTP code must be exactly 4 digits")
 });
 var PharmacyRegisterSchema = z.object({
@@ -37,7 +37,7 @@ var PharmacyRegisterSchema = z.object({
 });
 var PrescriptionUploadSchema = z.object({
   patientName: z.string().trim().min(2, "Patient name must be at least 2 characters").max(100, "Patient name cannot exceed 100 characters"),
-  patientPhone: z.string().trim().regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+  patientPhone: z.string().trim().min(7, "Phone number must be at least 7 digits").max(16, "Phone number cannot exceed 16 characters").regex(/^(\+)?[0-9\s-]{7,16}$/, "Phone number must be a valid international number"),
   privacyConsentGranted: z.boolean().refine((val) => val === true, {
     message: "Explicit customer privacy consent is required before prescription upload."
   }),

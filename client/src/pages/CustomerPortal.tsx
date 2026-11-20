@@ -28,9 +28,14 @@ import {
   RefreshCw,
   Loader2,
   Camera,
-  RotateCcw
+  RotateCcw,
+  Globe,
+  Building2,
+  Edit3,
+  ListFilter
 } from "lucide-react";
 import { toast } from "sonner";
+import { GLOBAL_HIGHLIGHT_ZONES } from "@/lib/worldLocations";
 
 interface MedicineRow {
   id: string;
@@ -38,14 +43,10 @@ interface MedicineRow {
   quantity: string;
 }
 
-// Helper to strip any redundant +91 or non-digits, keeping only clean 10 mobile digits
-const cleanTo10Digits = (val?: string) => {
+// Helper to format or sanitize customer phone
+const formatCustomerPhone = (val?: string) => {
   if (!val) return "";
-  let digits = val.replace(/\D/g, "");
-  if (digits.length > 10 && digits.startsWith("91")) {
-    digits = digits.slice(2);
-  }
-  return digits.slice(0, 10);
+  return val.trim();
 };
 
 export default function CustomerPortal() {
@@ -57,9 +58,11 @@ export default function CustomerPortal() {
 
   // Form State: clean real user inputs (zero fake preset data)
   const [fullName, setFullName] = useState(user?.name && user.id !== "guest" ? user.name : "");
-  const [mobile, setMobile] = useState(() => (user?.phone && user.id !== "guest" ? cleanTo10Digits(user.phone) : ""));
+  const [mobile, setMobile] = useState(() => (user?.phone && user.id !== "guest" ? user.phone : ""));
   const [address, setAddress] = useState(user?.location && user.id !== "guest" ? user.location : "");
   const [area, setArea] = useState("Indiranagar, Bengaluru");
+  const [isCustomArea, setIsCustomArea] = useState(false);
+  const [customArea, setCustomArea] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
   const [prescriptionFile, setPrescriptionFile] = useState<string | null>(null);
   const [prescriptionPreviewUrl, setPrescriptionPreviewUrl] = useState<string | null>(null);
@@ -83,13 +86,17 @@ export default function CustomerPortal() {
   // Sync state if user logs in or profile changes
   useEffect(() => {
     if (user?.phone && user.id !== "guest") {
-      setMobile(cleanTo10Digits(user.phone));
+      setMobile(user.phone);
     }
     if (user?.name && user.id !== "guest") {
       setFullName(user.name);
     }
     if (user?.location && user.id !== "guest") {
       setAddress(user.location);
+      const parts = user.location.split(",");
+      if (parts.length > 1) {
+        setArea(parts[1].trim());
+      }
     }
   }, [user?.phone, user?.name, user?.location, user?.id]);
 
@@ -426,15 +433,15 @@ export default function CustomerPortal() {
 
     // 3. Strict Input Validation
     const errors: Record<string, string> = {};
-    const cleanPhone = cleanTo10Digits(mobile);
+    const digitsOnly = mobile.replace(/\D/g, "");
 
     if (fullName.trim().length < 2) {
       errors.fullName = "Please enter your full name (minimum 2 characters)";
     }
-    if (!/^\d{10}$/.test(cleanPhone)) {
-      errors.mobile = "Please enter a valid 10-digit mobile number";
+    if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+      errors.mobile = "Please enter a valid mobile number (7-15 digits)";
     }
-    if (address.trim().length < 5) {
+    if (address.trim().length < 4) {
       errors.address = "Please enter a detailed delivery address";
     }
 
@@ -462,11 +469,12 @@ export default function CustomerPortal() {
 
     try {
       // Create a new order via centralized reactive OrderContext
+      const effectiveArea = (isCustomArea ? customArea.trim() : area) || "Global Zone";
       const newOrderId = createPatientRequest({
         fullName: fullName.trim(),
-        mobile: cleanPhone,
+        mobile: mobile.trim(),
         address: address.trim(),
-        area,
+        area: effectiveArea,
         isUrgent,
         prescriptionFile: prescriptionPreviewUrl || prescriptionFile,
         medicines: medicines.filter((m) => m.name.trim().length > 0)
@@ -508,7 +516,7 @@ export default function CustomerPortal() {
               Patient
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Submit a medicine request to independent neighbourhood pharmacies in Indiranagar.
+              Submit a medicine request to independent neighbourhood pharmacies in your area zone.
             </p>
           </div>
 
@@ -584,26 +592,20 @@ export default function CustomerPortal() {
                     <label className="text-xs font-semibold text-slate-700">
                       Mobile (for OTP & chemist contact)
                     </label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-3 text-xs font-semibold text-slate-500 bg-slate-100 border border-r-0 border-slate-200 rounded-l-lg select-none">
-                        +91
-                      </span>
+                    <div className="relative">
                       <input
                         type="tel"
                         value={mobile}
                         onChange={(e) => {
-                          const cleaned = cleanTo10Digits(e.target.value);
-                          setMobile(cleaned);
+                          setMobile(e.target.value);
                           if (validationErrors.mobile) {
                             setValidationErrors((prev) => ({ ...prev, mobile: "" }));
                           }
                         }}
-                        placeholder="Enter 10-digit mobile"
-                        maxLength={10}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
+                        placeholder="e.g. +91 9876543210 or +1 415 555 2671"
+                        maxLength={18}
                         required
-                        className={`w-full px-3 py-2 text-sm rounded-r-lg border bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors font-mono tracking-wide ${
+                        className={`w-full px-3 py-2 text-sm rounded-lg border bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors font-medium tracking-wide ${
                           validationErrors.mobile ? "border-rose-400 bg-rose-50/30" : "border-slate-200"
                         }`}
                       />
@@ -632,17 +634,85 @@ export default function CustomerPortal() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700">Area</label>
-                    <select
-                      value={area}
-                      onChange={(e) => setArea(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors cursor-pointer"
-                    >
-                      <option value="Indiranagar, Bengaluru">Indiranagar, Bengaluru</option>
-                      <option value="Defence Colony, Indiranagar">Defence Colony, Indiranagar</option>
-                      <option value="HAL 2nd Stage, Indiranagar">HAL 2nd Stage, Indiranagar</option>
-                      <option value="Domlur / 100ft Road">Domlur / 100ft Road</option>
-                    </select>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                        <Building2 className="w-3.5 h-3.5 text-emerald-600" /> Area Zone
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomArea(!isCustomArea)}
+                        className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        {isCustomArea ? (
+                          <>
+                            <ListFilter className="w-3 h-3" />
+                            <span>Pick from list</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit3 className="w-3 h-3" />
+                            <span>Type custom</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {isCustomArea ? (
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={customArea}
+                          onChange={(e) => {
+                            setCustomArea(e.target.value);
+                            setArea(e.target.value);
+                          }}
+                          placeholder="e.g. Indiranagar, Brooklyn, Deira, Westminster..."
+                          required
+                          className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsCustomArea(false)}
+                          title="Back to list"
+                          className="absolute right-2 top-2 text-xs text-slate-400 hover:text-slate-600 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={area}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setIsCustomArea(true);
+                          } else {
+                            setArea(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-emerald-600 transition-colors cursor-pointer"
+                      >
+                        {area && !GLOBAL_HIGHLIGHT_ZONES.includes(area) && (
+                          <option value={area}>{area}</option>
+                        )}
+                        <optgroup label="📍 Bengaluru Express Zones">
+                          <option value="Indiranagar, Bengaluru">Indiranagar, Bengaluru</option>
+                          <option value="Defence Colony, Indiranagar">Defence Colony, Indiranagar</option>
+                          <option value="Domlur, Bengaluru">Domlur, Bengaluru</option>
+                          <option value="HAL 2nd Stage, Bengaluru">HAL 2nd Stage, Bengaluru</option>
+                          <option value="Koramangala, Bengaluru">Koramangala, Bengaluru</option>
+                          <option value="Whitefield, Bengaluru">Whitefield, Bengaluru</option>
+                          <option value="HSR Layout, Bengaluru">HSR Layout, Bengaluru</option>
+                        </optgroup>
+                        <optgroup label="🌍 Worldwide Highlight Zones">
+                          {GLOBAL_HIGHLIGHT_ZONES.map((gz) => (
+                            <option key={`c-gz-${gz}`} value={gz}>
+                              {gz}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <option value="__custom__">✏️ Other / Type Custom Area Zone...</option>
+                      </select>
+                    )}
                   </div>
                 </div>
 

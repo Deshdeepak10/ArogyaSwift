@@ -138,7 +138,17 @@ interface AuthContextType {
 
   // Dedicated Role Auth Handlers
   loginPatient: (name: string, phone: string, address?: string, area?: string) => void;
-  registerPatient: (data: { name: string; phone: string; address: string; area: string; email?: string }) => void;
+  registerPatient: (data: {
+    name: string;
+    phone: string;
+    address: string;
+    area: string;
+    email?: string;
+    country?: string;
+    state?: string;
+    postalCode?: string;
+    fullAddress?: string;
+  }) => void;
   loginPharmacyUser: (shopName: string, licenseNo: string, email?: string) => void;
   registerPharmacyUser: (data: { ownerName: string; shopName: string; licenseNo: string; category: string; address: string; phone: string; email: string; coldChainReady: boolean; area?: string }) => void;
   loginRiderUser: (name: string, phone: string, vehicleType?: string) => void;
@@ -292,31 +302,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * 1. PATIENT AUTH METHODS
    */
   const loginPatient = (name: string, phone: string, address?: string, area?: string) => {
-    const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+    const rawDigits = phone.replace(/\D/g, "");
+    const lastDigits = rawDigits.slice(-4) || "0001";
     const newSession: UserSession = {
-      id: `u-patient-${cleanPhone || Date.now()}`,
-      name: name || (cleanPhone ? `Patient (+91 ${cleanPhone.slice(-4)})` : "Verified Patient"),
+      id: `u-patient-${rawDigits || Date.now()}`,
+      name: name || (lastDigits ? `Patient (••• ${lastDigits})` : "Verified Patient"),
       role: "patient",
-      email: `${cleanPhone}@patient.arogyaswift.in`,
-      phone: cleanPhone,
-      badge: `Verified Patient #${cleanPhone.slice(-4) || "0001"}`,
+      email: `${rawDigits || "patient"}@patient.arogyaswift.in`,
+      phone: phone,
+      badge: `Verified Patient #${lastDigits}`,
       avatar: "👩‍💼",
-      location: address ? `${address}${area ? `, ${area}` : ""}` : ""
+      location: address ? `${address}${area ? `, ${area}` : ""}` : "Global Zone"
     };
     saveActiveSession(newSession);
   };
 
-  const registerPatient = (data: { name: string; phone: string; address: string; area: string; email?: string }) => {
-    const cleanPhone = data.phone.replace(/\D/g, "").slice(-10);
+  const registerPatient = (data: {
+    name: string;
+    phone: string;
+    address: string;
+    area: string;
+    email?: string;
+    country?: string;
+    state?: string;
+    postalCode?: string;
+    fullAddress?: string;
+  }) => {
+    const rawDigits = data.phone.replace(/\D/g, "");
+    const lastDigits = rawDigits.slice(-4) || "0001";
+    const fullLocation =
+      data.fullAddress ||
+      [data.address, data.area, data.state, data.postalCode, data.country]
+        .filter(Boolean)
+        .join(", ");
+
     const newSession: UserSession = {
-      id: `u-patient-${cleanPhone || Date.now()}`,
+      id: `u-patient-${rawDigits || Date.now()}`,
       name: data.name,
       role: "patient",
-      email: data.email || `${cleanPhone}@patient.arogyaswift.in`,
-      phone: cleanPhone,
-      badge: `Patient Member #${cleanPhone.slice(-4)}`,
+      email: data.email || `${rawDigits || "member"}@patient.arogyaswift.in`,
+      phone: data.phone,
+      badge: `Patient Member #${lastDigits}`,
       avatar: "👩‍💼",
-      location: `${data.address}, ${data.area}`
+      location: fullLocation
     };
     saveActiveSession(newSession);
   };

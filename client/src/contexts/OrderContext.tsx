@@ -209,9 +209,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       id: newId,
       createdAt: "Just now",
       patientName: fullName,
-      patientPhone: mobile.startsWith("+91") ? mobile : `+91 ${mobile}`,
+      patientPhone: mobile.startsWith("+") ? mobile : `+91 ${mobile}`,
       address,
-      area: area.includes("Indiranagar") ? "Indiranagar" : area,
+      area: area || "Global Zone",
       isUrgent,
       prescriptionUrl: prescriptionFile || undefined,
       items: formattedItems.length > 0 ? formattedItems : [
@@ -341,9 +341,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       actionUrl: "/pharmacy"
     });
 
+    const currentOrder = orders.find((o) => o.id === orderId);
+    const orderZone = currentOrder?.area || "delivery zone";
+
     addNotification({
       title: "New Delivery Available",
-      message: `Order #${orderId} is confirmed and ready for dispatch in Indiranagar.`,
+      message: `Order #${orderId} is confirmed and ready for dispatch in ${orderZone}.`,
       role: "rider",
       type: "rider_dispatch",
       orderId,
@@ -659,9 +662,12 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
         actionUrl: "/delivery"
       });
 
+      const finishedOrder = orders.find((o) => o.id === orderId);
+      const deliveryZone = finishedOrder?.area || "delivery zone";
+
       addNotification({
         title: "Order Completed",
-        message: `Order #${orderId} delivered in Indiranagar. All compliance checks passed.`,
+        message: `Order #${orderId} delivered in ${deliveryZone}. All compliance checks passed.`,
         role: "admin",
         type: "delivery_complete",
         orderId,

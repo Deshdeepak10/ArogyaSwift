@@ -39,7 +39,9 @@ export const PhoneSignupSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+    .min(7, "Phone number must be at least 7 digits")
+    .max(16, "Phone number cannot exceed 16 characters")
+    .regex(/^(\+)?[0-9\s-]{7,16}$/, "Phone number must be a valid international number"),
   role: z.enum(["customer", "patient", "rider"]),
   email: z
     .string()
@@ -71,7 +73,9 @@ export const VerifyOtpSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+    .min(7, "Phone number must be at least 7 digits")
+    .max(16, "Phone number cannot exceed 16 characters")
+    .regex(/^(\+)?[0-9\s-]{7,16}$/, "Phone number must be a valid international number"),
   enteredOtp: z
     .string()
     .trim()
@@ -130,7 +134,9 @@ export const PrescriptionUploadSchema = z.object({
   patientPhone: z
     .string()
     .trim()
-    .regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
+    .min(7, "Phone number must be at least 7 digits")
+    .max(16, "Phone number cannot exceed 16 characters")
+    .regex(/^(\+)?[0-9\s-]{7,16}$/, "Phone number must be a valid international number"),
   privacyConsentGranted: z.boolean().refine((val) => val === true, {
     message: "Explicit customer privacy consent is required before prescription upload.",
   }),

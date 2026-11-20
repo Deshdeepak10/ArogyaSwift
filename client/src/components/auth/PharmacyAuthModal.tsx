@@ -21,8 +21,10 @@ import {
   ArrowRight,
   ShieldCheck,
   Snowflake,
-  UserCheck
+  UserCheck,
+  Globe
 } from "lucide-react";
+import { GLOBAL_HIGHLIGHT_ZONES } from "@/lib/worldLocations";
 
 function cleanTo10Digits(input: string): string {
   const digitsOnly = input.replace(/\D/g, "");
@@ -318,12 +320,21 @@ export function PharmacyAuthModal() {
                   <select
                     value={zone}
                     onChange={(e) => setZone(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600 cursor-pointer"
                   >
-                    <option value="Indiranagar, Bengaluru">Indiranagar Zone</option>
-                    <option value="Defence Colony, Indiranagar">Defence Colony Zone</option>
-                    <option value="Domlur, Bengaluru">Domlur Zone</option>
-                    <option value="HAL 2nd Stage, Bengaluru">HAL Zone</option>
+                    <optgroup label="📍 Bengaluru Hubs">
+                      <option value="Indiranagar, Bengaluru">Indiranagar Zone</option>
+                      <option value="Defence Colony, Indiranagar">Defence Colony Zone</option>
+                      <option value="Domlur, Bengaluru">Domlur Zone</option>
+                      <option value="HAL 2nd Stage, Bengaluru">HAL Zone</option>
+                      <option value="Koramangala, Bengaluru">Koramangala Zone</option>
+                      <option value="Whitefield, Bengaluru">Whitefield Zone</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global Operating Hubs">
+                      {GLOBAL_HIGHLIGHT_ZONES.map((gz) => (
+                        <option key={`pharm-${gz}`} value={gz}>{gz}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               </div>

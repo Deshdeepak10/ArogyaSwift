@@ -18,8 +18,10 @@ import {
   KeyRound,
   FileCheck,
   MapPin,
-  Box
+  Box,
+  Globe
 } from "lucide-react";
+import { GLOBAL_HIGHLIGHT_ZONES } from "@/lib/worldLocations";
 
 function cleanTo10Digits(input: string): string {
   const digitsOnly = input.replace(/\D/g, "");
@@ -331,12 +333,21 @@ export function DeliveryAuthModal() {
                   <select
                     value={zone}
                     onChange={(e) => setZone(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
                   >
-                    <option value="Indiranagar Zone">Indiranagar Zone</option>
-                    <option value="Defence Colony Zone">Defence Colony</option>
-                    <option value="Domlur Zone">Domlur Zone</option>
-                    <option value="HAL 2nd Stage">HAL Zone</option>
+                    <optgroup label="📍 Bengaluru Zones">
+                      <option value="Indiranagar Zone">Indiranagar Zone</option>
+                      <option value="Defence Colony Zone">Defence Colony</option>
+                      <option value="Domlur Zone">Domlur Zone</option>
+                      <option value="HAL 2nd Stage">HAL Zone</option>
+                      <option value="Koramangala Zone">Koramangala Zone</option>
+                      <option value="Whitefield Zone">Whitefield Zone</option>
+                    </optgroup>
+                    <optgroup label="🌍 Global Delivery Hubs">
+                      {GLOBAL_HIGHLIGHT_ZONES.map((gz) => (
+                        <option key={`del-${gz}`} value={gz}>{gz}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               </div>
