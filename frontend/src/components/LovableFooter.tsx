@@ -49,15 +49,11 @@ export function LovableFooter() {
           </nav>
         </div>
 
-        {/* Bottom Disclaimer Banner */}
+        {/* Bottom Copyright & Compliance */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500 text-center sm:text-left">
           <p>
             © {new Date().getFullYear()} ArogyaSwift Healthcare Technologies. Compliant with Drugs and Cosmetics Act & DPDP Act 2023.
           </p>
-          <div className="inline-flex items-center gap-1.5 text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200/60">
-            <span>⚠️</span>
-            <span>Demo Prototype: Medicines & pharmacy profiles are mock data for platform demonstration.</span>
-          </div>
         </div>
       </div>
     </footer>
