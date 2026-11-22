@@ -17,13 +17,13 @@ export default defineConfig({
   plugins,
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
+      "@": path.resolve(import.meta.dirname, "frontend", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
   envDir: path.resolve(import.meta.dirname),
-  root: path.resolve(import.meta.dirname, "client"),
+  root: path.resolve(import.meta.dirname, "frontend"),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
@@ -50,6 +50,13 @@ export default defineConfig({
     strictPort: false,
     host: true,
     allowedHosts: true,
+    proxy: {
+      "/api": {
+        target: process.env.BACKEND_URL || "http://localhost:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     fs: {
       strict: true,
     },

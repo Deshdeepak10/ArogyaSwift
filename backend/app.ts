@@ -30,7 +30,7 @@ export function createApp() {
       "/schema.sql",
       "/package.json",
       "/tsconfig",
-      "/server/",
+      "/backend/",
       "/node_modules",
       ".ts",
       ".tsx",

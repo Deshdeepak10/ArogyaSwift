@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createApp } from "../server/app.ts";
+import { createApp } from "../backend/app.ts";
 import http from "node:http";
 
 function createTestServer() {

@@ -1,4 +1,4 @@
-// server/app.ts
+// backend/app.ts
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -116,7 +116,7 @@ var appConfig = {
   rateLimit: rateLimitConfig
 };
 
-// server/middleware/rateLimiter.ts
+// backend/middleware/rateLimiter.ts
 var ipStore = /* @__PURE__ */ new Map();
 var accountStore = /* @__PURE__ */ new Map();
 var cleanupInterval = setInterval(() => {
@@ -259,7 +259,7 @@ function authenticatedUserRateLimiter(req, res, next) {
   next();
 }
 
-// server/middleware/roleAuth.ts
+// backend/middleware/roleAuth.ts
 function requireRole(allowedRoles) {
   return (req, res, next) => {
     const roleHeader = req.headers["x-user-role"]?.toLowerCase();
@@ -302,7 +302,7 @@ function requireRole(allowedRoles) {
   };
 }
 
-// server/db/index.ts
+// backend/db/index.ts
 import pg from "pg";
 var { Pool } = pg;
 var connectionString = process.env.DATABASE_URL;
@@ -344,7 +344,7 @@ function getDbStatus() {
   };
 }
 
-// server/routes.ts
+// backend/routes.ts
 function registerRoutes(app2) {
   const healthHandler = (_req, res) => {
     res.json({
@@ -995,7 +995,7 @@ function registerRoutes(app2) {
   });
 }
 
-// server/app.ts
+// backend/app.ts
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path.dirname(__filename);
 function createApp() {
@@ -1013,7 +1013,7 @@ function createApp() {
       "/schema.sql",
       "/package.json",
       "/tsconfig",
-      "/server/",
+      "/backend/",
       "/node_modules",
       ".ts",
       ".tsx",
@@ -1114,7 +1114,7 @@ function createApp() {
 }
 var app = createApp();
 
-// server/vercel.ts
+// backend/vercel.ts
 function handler(req, res) {
   try {
     return app(req, res);

@@ -3,7 +3,7 @@ import { createServer as createHttpsServer } from "https";
 import fs from "fs";
 import { app } from "./app";
 
-const port = Number(process.env.PORT) || 3000;
+const port = Number(process.env.PORT) || 5000;
 const sslKeyPath = process.env.SSL_KEY_PATH;
 const sslCertPath = process.env.SSL_CERT_PATH;
 
