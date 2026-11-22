@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LovableHeader } from "@/components/LovableHeader";
 import { LovableFooter } from "@/components/LovableFooter";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,12 +40,73 @@ export default function DeliveryPortal() {
   } = useOrders();
 
   const isCourier = user.role === "rider";
-  const [selectedRiderId, setSelectedRiderId] = useState<string>(() =>
-    isCourier ? (user.id !== "u-rider-default" ? user.id : "rider-ravi") : "all"
+
+  // Find any active order dispatched to a rider to intelligently default
+  const activeAssignedOrder = orders.find(
+    (o) =>
+      o.riderId &&
+      (o.status === "rider_assigned" ||
+        o.status === "collecting" ||
+        o.status === "picked_up" ||
+        o.status === "out_for_delivery")
   );
-  const activeRiderId = isCourier ? (user.id !== "u-rider-default" ? user.id : "rider-ravi") : selectedRiderId;
+
+  const getInitialRiderId = () => {
+    // 1. If user is logged in as a specific demo rider
+    if (user.id && DEMO_RIDERS.some((r) => r.id === user.id)) {
+      return user.id;
+    }
+    const matchedByName = DEMO_RIDERS.find((r) =>
+      user.name && user.name.toLowerCase().includes(r.name.toLowerCase())
+    );
+    if (matchedByName) return matchedByName.id;
+
+    // 2. If an order was just assigned to a rider (e.g. Kiran), auto-select that rider!
+    if (activeAssignedOrder?.riderId && DEMO_RIDERS.some((r) => r.id === activeAssignedOrder.riderId)) {
+      return activeAssignedOrder.riderId;
+    }
+
+    // 3. Fallback: if courier role, default to Kiran (rider-kiran)
+    if (isCourier) {
+      return "rider-kiran";
+    }
+    return "all";
+  };
+
+  const [selectedRiderId, setSelectedRiderId] = useState<string>(getInitialRiderId);
+
+  // Keep selectedRiderId updated if user switches or an order is assigned to Kiran
+  useEffect(() => {
+    if (user.id && DEMO_RIDERS.some((r) => r.id === user.id)) {
+      setSelectedRiderId(user.id);
+    } else if (
+      activeAssignedOrder?.riderId &&
+      selectedRiderId !== activeAssignedOrder.riderId &&
+      selectedRiderId !== "all"
+    ) {
+      // If currently on a rider with 0 active orders, auto-switch to the assigned rider
+      const currentOrders = orders.filter(
+        (o) =>
+          o.riderId === selectedRiderId &&
+          (o.status === "rider_assigned" ||
+            o.status === "collecting" ||
+            o.status === "picked_up" ||
+            o.status === "out_for_delivery")
+      );
+      if (currentOrders.length === 0) {
+        setSelectedRiderId(activeAssignedOrder.riderId);
+      }
+    }
+  }, [user.id, activeAssignedOrder?.riderId]);
+
+  const activeRiderId = selectedRiderId;
   const currentRider =
-    DEMO_RIDERS.find((r) => r.id === activeRiderId) || (isCourier ? DEMO_RIDERS[0] : undefined);
+    selectedRiderId === "all"
+      ? undefined
+      : DEMO_RIDERS.find((r) => r.id === activeRiderId) ||
+        (user.id && DEMO_RIDERS.find((r) => r.id === user.id)) ||
+        DEMO_RIDERS.find((r) => r.id === "rider-kiran") ||
+        DEMO_RIDERS[0];
 
   const [enteredOtp, setEnteredOtp] = useState<Record<string, string>>({});
   const [pickupOtpInputs, setPickupOtpInputs] = useState<Record<string, string>>({});
@@ -53,8 +114,8 @@ export default function DeliveryPortal() {
   // 1. Pending dispatch requests waiting for rider to accept (Strictly isolated)
   const pendingRequests = orders.filter((o) => {
     if (o.status !== "rider_assigned") return false;
-    // Admins can inspect all pending dispatches
-    if (user.role === "admin" && selectedRiderId === "all") return true;
+    // Admins and "all" view can inspect all pending dispatches
+    if (selectedRiderId === "all") return true;
 
     // Directly assigned to this rider
     if (o.riderId === activeRiderId) return true;
@@ -72,7 +133,7 @@ export default function DeliveryPortal() {
       o.status === "picked_up" ||
       o.status === "out_for_delivery";
     if (!isActive) return false;
-    if (user.role === "admin" && selectedRiderId === "all") return true;
+    if (selectedRiderId === "all") return true;
 
     if (o.riderId === activeRiderId) return true;
     if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
@@ -82,7 +143,7 @@ export default function DeliveryPortal() {
   // 3. Completed deliveries
   const completedDeliveries = orders.filter((o) => {
     if (o.status !== "delivered") return false;
-    if (user.role === "admin" && selectedRiderId === "all") return true;
+    if (selectedRiderId === "all") return true;
 
     if (o.riderId === activeRiderId) return true;
     if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
@@ -222,62 +283,66 @@ export default function DeliveryPortal() {
               </div>
             </div>
 
-            {/* Quick Rider Switcher (Couriers locked to own assigned queue; Admins have fleet view) */}
-            {isCourier && user.role !== "admin" ? (
-              <div className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900 shadow-xs">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>🔒 Courier Verified: <strong>{user.name || currentRider?.name || "Active Courier"}</strong> (Showing only parcels assigned to you)</span>
-              </div>
-            ) : (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-              <button
-                type="button"
-                onClick={() => setSelectedRiderId("all")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  selectedRiderId === "all"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                All Fleet ({orders.filter((o) => o.status === "rider_assigned" || o.status === "collecting" || o.status === "picked_up" || o.status === "out_for_delivery").length})
-              </button>
-              {DEMO_RIDERS.map((rider) => {
-                const riderActiveCount = orders.filter(
-                  (o) =>
-                    (o.riderId === rider.id ||
-                      (o.riderName && o.riderName.toLowerCase().includes(rider.name.toLowerCase()))) &&
-                    o.status !== "delivered" &&
-                    o.status !== "in_review" &&
-                    o.status !== "quoted" &&
-                    o.status !== "order_confirmed" &&
-                    o.status !== "rejected" &&
-                    o.status !== "cancelled"
-                ).length;
+            {/* Quick Rider Switcher (Accessible to couriers and dispatchers alike) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              {isCourier && currentRider && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900 shrink-0 shadow-2xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Viewing as: <strong>{currentRider.name}</strong> ({currentRider.type === "in_house" ? "Store Rider" : "Shared Partner"})</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRiderId("all")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    selectedRiderId === "all"
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  All Fleet ({orders.filter((o) => o.status === "rider_assigned" || o.status === "collecting" || o.status === "picked_up" || o.status === "out_for_delivery").length})
+                </button>
+                {DEMO_RIDERS.map((rider) => {
+                  const riderActiveCount = orders.filter(
+                    (o) =>
+                      (o.riderId === rider.id ||
+                        (o.riderName && o.riderName.toLowerCase().includes(rider.name.toLowerCase()))) &&
+                      o.status !== "delivered" &&
+                      o.status !== "in_review" &&
+                      o.status !== "quoted" &&
+                      o.status !== "order_confirmed" &&
+                      o.status !== "rejected" &&
+                      o.status !== "cancelled"
+                  ).length;
 
-                return (
-                  <button
-                    key={rider.id}
-                    type="button"
-                    onClick={() => setSelectedRiderId(rider.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                      selectedRiderId === rider.id
-                        ? "bg-[#065F46] text-white shadow-xs"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    <span>{rider.name}</span>
-                    {riderActiveCount > 0 && (
-                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
-                        selectedRiderId === rider.id ? "bg-white text-emerald-900" : "bg-emerald-600 text-white"
-                      }`}>
-                        {riderActiveCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={rider.id}
+                      type="button"
+                      onClick={() => setSelectedRiderId(rider.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                        selectedRiderId === rider.id
+                          ? "bg-[#065F46] text-white shadow-xs"
+                          : riderActiveCount > 0
+                          ? "bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      <span>{rider.type === "in_house" ? "🚲" : "🛵"}</span>
+                      <span>{rider.name}</span>
+                      {riderActiveCount > 0 && (
+                        <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold ${
+                          selectedRiderId === rider.id ? "bg-white text-emerald-900" : "bg-emerald-600 text-white animate-pulse"
+                        }`}>
+                          {riderActiveCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            )}
           </div>
 
           {/* Quick Shift Counters */}

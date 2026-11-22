@@ -60,6 +60,7 @@ export function AuthModal() {
     isAuthModalOpen,
     setIsAuthModalOpen,
     loginAsRole,
+    loginRiderUser,
     loginWithGoogle,
     registerWithGoogle,
     applyGoogleProfile,
@@ -609,23 +610,47 @@ export function AuthModal() {
 
                 {/* RIDER TAB */}
                 <TabsContent value="rider" className="mt-4 space-y-4">
-                  <div className="p-3.5 bg-cyan-50 border border-cyan-200 rounded-2xl flex items-center justify-between">
-                    <div>
-                      <h4 className="font-extrabold text-xs text-cyan-900">Vikram Singh (EV Scooter)</h4>
-                      <p className="text-[11px] text-cyan-700">UP-14-EV-8821 • Cold Box Equipped</p>
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-slate-700">Select Active Demo Rider:</p>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                        <div>
+                          <h4 className="font-extrabold text-xs text-emerald-950">🚲 Kiran</h4>
+                          <p className="text-[11px] text-emerald-700">Store In-House • Hero EV</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            loginRiderUser("Kiran", "9876522002", "Hero Electric Scooter (KA-03-EV-1120)", "rider-kiran");
+                            toast.success("Signed in as Kiran (Store In-House Rider)!");
+                            setIsAuthModalOpen(false);
+                            setLocation("/delivery");
+                          }}
+                          className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
+                        >
+                          Sign In
+                        </Button>
+                      </div>
+
+                      <div className="p-3 bg-cyan-50 border border-cyan-200 rounded-xl flex items-center justify-between">
+                        <div>
+                          <h4 className="font-extrabold text-xs text-cyan-950">🚲 Ramu</h4>
+                          <p className="text-[11px] text-cyan-700">Store In-House • Bajaj Platina</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            loginRiderUser("Ramu", "9876522001", "Bajaj Platina (KA-03-HF-4412)", "rider-ramu");
+                            toast.success("Signed in as Ramu (Store In-House Rider)!");
+                            setIsAuthModalOpen(false);
+                            setLocation("/delivery");
+                          }}
+                          className="bg-cyan-700 hover:bg-cyan-800 text-white font-bold text-xs"
+                        >
+                          Sign In
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        loginAsRole("rider");
-                        toast.success("Signed in with demo rider account!");
-                        setIsAuthModalOpen(false);
-                        setLocation("/delivery");
-                      }}
-                      className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs"
-                    >
-                      Instant Sign In
-                    </Button>
                   </div>
 
                   <form onSubmit={handleRiderSubmit} className="space-y-3">

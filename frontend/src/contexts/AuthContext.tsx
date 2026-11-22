@@ -5,6 +5,7 @@ import {
   isGoogleAuthConfigured,
   type GoogleUserProfile
 } from "@/lib/googleAuth";
+import { DEMO_RIDERS } from "@/lib/demoRiders";
 
 export type UserRole = "customer" | "patient" | "pharmacy" | "rider" | "admin";
 export type AuthModalTarget = "patient" | "pharmacy" | "delivery" | "admin" | null;
@@ -79,16 +80,16 @@ export const PRESET_USERS: Record<UserRole, UserSession> = {
     location: "12th Main Rd, Indiranagar, Bengaluru"
   },
   rider: {
-    id: "u-rider-default",
-    name: "Delivery Fleet Partner",
+    id: "rider-kiran",
+    name: "Kiran",
     role: "rider",
-    email: "rider@arogyaswift.in",
-    phone: "",
-    badge: "Delivery Partner",
+    email: "kiran@rider.arogyaswift.in",
+    phone: "+91 98765 22002",
+    badge: "Store In-House Rider • 4.8★",
     avatar: "🏍️",
-    location: "",
-    vehicleType: "Delivery Vehicle",
-    vehicleNo: ""
+    location: "Shree Ganesh Medicals",
+    vehicleType: "Hero Electric Scooter (KA-03-EV-1120)",
+    vehicleNo: "KA-03-EV-1120"
   },
   admin: {
     id: "u-admin-default",
@@ -151,7 +152,7 @@ interface AuthContextType {
   }) => void;
   loginPharmacyUser: (shopName: string, licenseNo: string, email?: string) => void;
   registerPharmacyUser: (data: { ownerName: string; shopName: string; licenseNo: string; category: string; address: string; phone: string; email: string; coldChainReady: boolean; area?: string }) => void;
-  loginRiderUser: (name: string, phone: string, vehicleType?: string) => void;
+  loginRiderUser: (name: string, phone: string, vehicleType?: string, riderId?: string) => void;
   registerRiderUser: (data: { name: string; phone: string; vehicleType: string; vehicleNo: string; drivingLicense?: string; zone: string }) => void;
   loginAdminUser: (name: string, email: string, pin: string, roleTitle?: string) => void;
   registerAdminStaff: (data: { name: string; email: string; department: string; pin: string }) => void;
@@ -415,18 +416,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * 3. DELIVERY RIDER AUTH METHODS
    */
-  const loginRiderUser = (name: string, phone: string, vehicleType?: string) => {
+  const loginRiderUser = (name: string, phone: string, vehicleType?: string, riderId?: string) => {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+    const matchedRider = DEMO_RIDERS.find(
+      (r) =>
+        (riderId && r.id === riderId) ||
+        (name && r.name.toLowerCase() === name.toLowerCase()) ||
+        (cleanPhone && r.phone.replace(/\D/g, "").slice(-10) === cleanPhone)
+    );
+
+    const finalId = matchedRider ? matchedRider.id : (riderId || `u-rider-${cleanPhone || Date.now()}`);
+    const finalName = matchedRider ? matchedRider.name : (name || (cleanPhone ? `Delivery Partner (+91 ${cleanPhone.slice(-4)})` : "Delivery Partner"));
+    const finalVehicle = matchedRider ? matchedRider.vehicle : (vehicleType || "Delivery Vehicle (Cold Storage)");
+
     const newSession: UserSession = {
-      id: `u-rider-${cleanPhone || Date.now()}`,
-      name: name || (cleanPhone ? `Delivery Partner (+91 ${cleanPhone.slice(-4)})` : "Delivery Partner"),
+      id: finalId,
+      name: finalName,
       role: "rider",
-      email: `${cleanPhone}@rider.arogyaswift.in`,
-      phone: cleanPhone,
-      badge: `Active Fleet Partner #AS-R${cleanPhone.slice(-4) || "0001"}`,
+      email: `${cleanPhone || "rider"}@rider.arogyaswift.in`,
+      phone: matchedRider ? matchedRider.phone : cleanPhone,
+      badge: matchedRider ? `${matchedRider.typeLabel} • ${matchedRider.rating}` : `Active Fleet Partner #AS-R${cleanPhone.slice(-4) || "0001"}`,
       avatar: "🏍️",
-      location: "",
-      vehicleType: vehicleType || "Delivery Vehicle (Cold Storage)"
+      location: matchedRider?.pharmacyName || "",
+      vehicleType: finalVehicle
     };
     saveActiveSession(newSession);
   };

@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useOrders } from "@/contexts/OrderContext";
+import { DEMO_RIDERS } from "@/lib/demoRiders";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import {
@@ -42,6 +44,7 @@ export function DeliveryAuthModal() {
     registerRiderUser
   } = useAuth();
   const { addNotification } = useNotifications();
+  const { orders } = useOrders();
 
   const isOpen = activeRoleModal === "delivery";
 
@@ -87,15 +90,18 @@ export function DeliveryAuthModal() {
       return;
     }
 
-    const partnerName = `Delivery Partner (+91 ${cleaned.slice(-4)})`;
-    loginRiderUser(partnerName, cleaned, "Electric Scooter (Cold Storage Box)");
+    const matched = DEMO_RIDERS.find((r) => r.phone.replace(/\D/g, "").slice(-10) === cleaned);
+    const partnerName = matched ? matched.name : `Delivery Partner (+91 ${cleaned.slice(-4)})`;
+    const riderId = matched ? matched.id : undefined;
+    const vehicle = matched ? matched.vehicle : "Electric Scooter (Cold Storage Box)";
+    loginRiderUser(partnerName, cleaned, vehicle, riderId);
     addNotification({
       title: "Rider Shift Active 🟢",
       message: `${partnerName} is online and ready to receive multi-chemist pickup orders.`,
       role: "rider",
       type: "system_alert"
     });
-    toast.success("Welcome back! Delivery Partner shift is now online.");
+    toast.success(`Welcome back, ${partnerName}! Delivery Partner shift is now online.`);
     closeRoleAuth();
     setLocation("/delivery");
   };
@@ -188,6 +194,84 @@ export function DeliveryAuthModal() {
 
           {/* TAB 1: RIDER LOGIN */}
           <TabsContent value="login" className="space-y-4 pt-3">
+            {/* Quick Demo Courier Selection */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">Select Demo Courier Profile</span>
+                <span className="text-[10px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">
+                  Instant Access
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {DEMO_RIDERS.map((rider) => {
+                  const hasPendingOrder = orders.some(
+                    (o) =>
+                      (o.riderId === rider.id ||
+                        (o.riderName && o.riderName.toLowerCase().includes(rider.name.toLowerCase()))) &&
+                      o.status !== "delivered" &&
+                      o.status !== "rejected" &&
+                      o.status !== "cancelled"
+                  );
+                  return (
+                    <button
+                      key={rider.id}
+                      type="button"
+                      onClick={() => {
+                        loginRiderUser(rider.name, rider.phone, rider.vehicle, rider.id);
+                        addNotification({
+                          title: "Rider Shift Active 🟢",
+                          message: `${rider.name} (${rider.typeLabel}) is online and ready for deliveries.`,
+                          role: "rider",
+                          type: "system_alert"
+                        });
+                        toast.success(`Logged in as ${rider.name} (${rider.typeLabel})!`);
+                        closeRoleAuth();
+                        setLocation("/delivery");
+                      }}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        hasPendingOrder
+                          ? "bg-emerald-50 border-emerald-400 hover:border-emerald-500 shadow-2xs"
+                          : "bg-slate-50 border-slate-200 hover:bg-slate-100/90 hover:border-slate-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center font-black text-sm text-slate-800 shrink-0 shadow-2xs">
+                          {rider.type === "in_house" ? "🚲" : "🛵"}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-extrabold text-xs text-slate-900">{rider.name}</span>
+                            <span className="text-[10px] text-slate-500 font-medium">
+                              ({rider.type === "in_house" ? "Store In-House" : "Shared Partner"})
+                            </span>
+                            {hasPendingOrder && (
+                              <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-emerald-600 text-white animate-pulse">
+                                ⚡ Assigned Order Ready
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                            {rider.vehicle} • {rider.phone}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold text-emerald-700 bg-white px-2 py-1 rounded-md border border-slate-200 shrink-0 shadow-2xs">
+                        Sign In →
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="relative flex items-center justify-center my-1">
+              <div className="border-t border-slate-200 w-full" />
+              <span className="bg-white px-2 text-[10px] uppercase font-bold text-slate-400 shrink-0">
+                Or Sign In with Phone OTP
+              </span>
+              <div className="border-t border-slate-200 w-full" />
+            </div>
+
             <form onSubmit={handleLoginSubmit} className="space-y-3.5">
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
@@ -212,6 +296,39 @@ export function DeliveryAuthModal() {
                     className="px-3 text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:bg-amber-50 shrink-0 border-l border-slate-200 transition-colors cursor-pointer"
                   >
                     {isOtpSent ? "Resend" : "Send OTP"}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5 pt-1.5 flex-wrap">
+                  <span className="text-[10px] text-slate-400">Quick fill:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginPhone("9876522002");
+                      setLoginOtp("1234");
+                    }}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-600 border border-slate-200 cursor-pointer"
+                  >
+                    Kiran (Store)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginPhone("9876522001");
+                      setLoginOtp("1234");
+                    }}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-600 border border-slate-200 cursor-pointer"
+                  >
+                    Ramu (Store)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginPhone("9876599887");
+                      setLoginOtp("1234");
+                    }}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 text-slate-600 border border-slate-200 cursor-pointer"
+                  >
+                    Ravi (Ekart)
                   </button>
                 </div>
               </div>
