@@ -17,12 +17,12 @@ export default defineConfig({
   plugins,
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "frontend", "src"),
+      "@": path.resolve(import.meta.dirname, "..", "frontend", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
     },
   },
   envDir: path.resolve(import.meta.dirname),
-  root: path.resolve(import.meta.dirname, "frontend"),
+  root: path.resolve(import.meta.dirname, "..", "frontend"),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,

@@ -10,7 +10,7 @@ import {
   AdminPharmacyVerifySchema,
   DeliveryTaskAssignSchema,
   RevenueCalculatorSchema,
-} from "../shared/schemas";
+} from "../core/shared/schemas";
 import {
   authRateLimiter,
   publicRateLimiter,

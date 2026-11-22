@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { rateLimitConfig } from "../../shared/config";
+import { rateLimitConfig } from "../../core/shared/config";
 
 interface RateLimitRecord {
   count: number;

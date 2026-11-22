@@ -6,15 +6,15 @@
   "scripts": {
     "dev": "concurrently -k -n \"BACKEND,FRONTEND\" -c \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "vite --host",
-    "dev:backend": "tsx watch backend/index.ts",
+    "dev:backend": "tsx watch ../backend/index.ts",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build",
-    "build:backend": "esbuild backend/index.ts --platform=node --packages=external --bundle --format=esm --minify --drop:debugger --legal-comments=none --outdir=dist && esbuild backend/vercel.ts --platform=node --packages=external --bundle --format=esm --outfile=api/index.js",
+    "build:backend": "esbuild ../backend/index.ts --platform=node --packages=external --bundle --format=esm --minify --drop:debugger --legal-comments=none --outdir=dist && esbuild ../backend/vercel.ts --platform=node --packages=external --bundle --format=esm --outfile=api/index.js",
     "build:client": "npm run build:frontend",
     "pages:build": "npm run build:frontend",
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
-    "test": "tsx --test backend/tests/security.test.mjs",
+    "test": "tsx --test ../backend/tests/security.test.mjs",
     "check": "tsc --noEmit",
     "format": "prettier --write ."
   },

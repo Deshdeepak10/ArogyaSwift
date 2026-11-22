@@ -140,7 +140,7 @@ export function createApp() {
     const staticPath =
       process.env.NODE_ENV === "production"
         ? path.resolve(__dirname, "public")
-        : path.resolve(__dirname, "..", "dist", "public");
+        : path.resolve(__dirname, "..", "core", "dist", "public");
 
     app.use(
       express.static(staticPath, {

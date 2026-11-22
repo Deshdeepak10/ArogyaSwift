@@ -1,4 +1,4 @@
-// backend/app.ts
+// ../backend/app.ts
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -116,7 +116,7 @@ var appConfig = {
   rateLimit: rateLimitConfig
 };
 
-// backend/middleware/rateLimiter.ts
+// ../backend/middleware/rateLimiter.ts
 var ipStore = /* @__PURE__ */ new Map();
 var accountStore = /* @__PURE__ */ new Map();
 var cleanupInterval = setInterval(() => {
@@ -259,7 +259,7 @@ function authenticatedUserRateLimiter(req, res, next) {
   next();
 }
 
-// backend/middleware/roleAuth.ts
+// ../backend/middleware/roleAuth.ts
 function requireRole(allowedRoles) {
   return (req, res, next) => {
     const roleHeader = req.headers["x-user-role"]?.toLowerCase();
@@ -302,7 +302,7 @@ function requireRole(allowedRoles) {
   };
 }
 
-// backend/db/index.ts
+// ../backend/db/index.ts
 import pg from "pg";
 var { Pool } = pg;
 var connectionString = process.env.DATABASE_URL;
@@ -344,7 +344,7 @@ function getDbStatus() {
   };
 }
 
-// backend/routes.ts
+// ../backend/routes.ts
 function registerRoutes(app2) {
   const healthHandler = (_req, res) => {
     res.json({
@@ -995,7 +995,7 @@ function registerRoutes(app2) {
   });
 }
 
-// backend/app.ts
+// ../backend/app.ts
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path.dirname(__filename);
 function createApp() {
@@ -1091,7 +1091,7 @@ function createApp() {
   app2.use(express.urlencoded({ extended: false, limit: "2mb" }));
   registerRoutes(app2);
   if (!process.env.VERCEL) {
-    const staticPath = process.env.NODE_ENV === "production" ? path.resolve(__dirname, "public") : path.resolve(__dirname, "..", "dist", "public");
+    const staticPath = process.env.NODE_ENV === "production" ? path.resolve(__dirname, "public") : path.resolve(__dirname, "..", "core", "dist", "public");
     app2.use(
       express.static(staticPath, {
         dotfiles: "ignore",
@@ -1114,7 +1114,7 @@ function createApp() {
 }
 var app = createApp();
 
-// backend/vercel.ts
+// ../backend/vercel.ts
 function handler(req, res) {
   try {
     return app(req, res);

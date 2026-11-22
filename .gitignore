@@ -4,11 +4,13 @@
 
 # Build outputs
 dist/
+core/dist/
 build/
 *.dist
 
 # Environment variables
 .env
+core/.env
 .env.local
 .env.development.local
 .env.test.local
