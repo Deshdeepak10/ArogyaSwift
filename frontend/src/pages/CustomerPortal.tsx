@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrders } from "@/contexts/OrderContext";
 import { SpamShield } from "@/components/SpamShield";
 import { trackEvent } from "@/lib/analytics";
+import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
 import Tesseract from "tesseract.js";
 import {
   Upload,
@@ -32,7 +33,9 @@ import {
   Globe,
   Building2,
   Edit3,
-  ListFilter
+  ListFilter,
+  Navigation,
+  ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 import { GLOBAL_HIGHLIGHT_ZONES } from "@/lib/worldLocations";
@@ -1325,6 +1328,38 @@ export default function CustomerPortal() {
                       <div className="text-right text-[11px] text-emerald-800/80 max-w-[200px]">
                         Share this code only when rider delivers your sealed parcel.
                       </div>
+                    </div>
+                  )}
+
+                  {/* Live Rider & Google Maps Route Strip for Patient */}
+                  {order.riderName && order.riderName !== "Pending dispatch" && (
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                          <Bike className="w-4 h-4 text-emerald-700" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900">{order.riderName}</div>
+                          <div className="text-[11px] text-slate-500">
+                            {order.status === "out_for_delivery" ? "Heading to your address" : "Collecting from pharmacies"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <a
+                        href={getGoogleMapsDirectionsUrl({
+                          origin: order.pickupStops?.[0]?.address || "Indiranagar, Bengaluru",
+                          destination: order.address,
+                          travelMode: "two_wheeler"
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#065F46] hover:bg-[#044E39] text-white font-bold text-[11px] shadow-2xs self-start sm:self-auto transition-colors cursor-pointer"
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>Track Route (Google Maps)</span>
+                        <ExternalLink className="w-3 h-3 ml-0.5" />
+                      </a>
                     </div>
                   )}
 

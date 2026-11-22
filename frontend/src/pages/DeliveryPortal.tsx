@@ -4,6 +4,8 @@ import { LovableFooter } from "@/components/LovableFooter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrders } from "@/contexts/OrderContext";
 import { DEMO_RIDERS, DemoRider, getRiderById } from "@/lib/demoRiders";
+import { DeliveryRouteMap } from "@/components/DeliveryRouteMap";
+import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
 import {
   Bike,
   CheckCircle2,
@@ -16,7 +18,9 @@ import {
   ArrowRight,
   Package,
   Lock,
-  AlertCircle
+  AlertCircle,
+  Navigation,
+  ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -416,18 +420,36 @@ export default function DeliveryPortal() {
                     ))}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleAccept(req.id)}
-                    className="w-full py-2.5 rounded-lg bg-[#065F46] hover:bg-[#044E39] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Package className="w-4 h-4" />
-                    <span>
-                      {currentRider
-                        ? `Accept delivery run as ${currentRider.name}`
-                        : "Accept delivery run"}
-                    </span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <a
+                      href={getGoogleMapsDirectionsUrl({
+                        origin: req.pickupStops[0]?.address,
+                        destination: req.address,
+                        waypoints: req.pickupStops.length > 1 ? req.pickupStops.slice(1).map((s) => s.address) : [],
+                        travelMode: "two_wheeler"
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto px-3.5 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200"
+                    >
+                      <Navigation className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Preview Google Maps Route</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAccept(req.id)}
+                      className="w-full sm:flex-1 py-2.5 rounded-lg bg-[#065F46] hover:bg-[#044E39] text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Package className="w-4 h-4" />
+                      <span>
+                        {currentRider
+                          ? `Accept delivery run as ${currentRider.name}`
+                          : "Accept delivery run"}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -519,6 +541,18 @@ export default function DeliveryPortal() {
                       </div>
                     </div>
 
+                    {/* Live Visual Map Locating Origin & Destination with Google Maps */}
+                    <DeliveryRouteMap
+                      orderId={delivery.id}
+                      patientName={delivery.patientName}
+                      patientAddress={delivery.address}
+                      patientPhone={delivery.patientPhone}
+                      area={delivery.area}
+                      pickupStops={delivery.pickupStops}
+                      currentStepIndex={delivery.currentStepIndex}
+                      riderName={delivery.riderName}
+                    />
+
                     {/* Step 1: Pickup Checklist with Chemist Pickup OTP */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -558,17 +592,34 @@ export default function DeliveryPortal() {
                                   </div>
                                 </div>
 
-                                {stop.isCollected ? (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 self-start sm:self-auto">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                                    <span>Parcel Handover Confirmed (OTP Verified ✓)</span>
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 self-start sm:self-auto">
-                                    <Clock className="w-3 h-3 text-amber-700" />
-                                    <span>Pending Handover OTP</span>
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                                  <a
+                                    href={getGoogleMapsDirectionsUrl({
+                                      destination: stop.address,
+                                      travelMode: "two_wheeler"
+                                    })}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-300 transition-colors cursor-pointer"
+                                    title="Open Google Maps turn-by-turn navigation to this pharmacy"
+                                  >
+                                    <Navigation className="w-3 h-3 text-emerald-700" />
+                                    <span>Navigate to Chemist</span>
+                                    <ExternalLink className="w-2.5 h-2.5 text-emerald-700" />
+                                  </a>
+
+                                  {stop.isCollected ? (
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                                      <span>Parcel Handover Confirmed (OTP Verified ✓)</span>
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                      <Clock className="w-3 h-3 text-amber-700" />
+                                      <span>Pending Handover OTP</span>
+                                    </span>
+                                  )}
+                                </div>
                               </div>
 
                               {/* Chemist OTP Verification Form if stop not collected */}
@@ -663,14 +714,32 @@ export default function DeliveryPortal() {
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleMaskedCall(delivery.patientPhone)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold shadow-xs self-start sm:self-auto cursor-pointer"
-                        >
-                          <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>Call via masked number (demo)</span>
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                          <a
+                            href={getGoogleMapsDirectionsUrl({
+                              origin: delivery.pickupStops[0]?.address,
+                              destination: delivery.address,
+                              travelMode: "two_wheeler"
+                            })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#065F46] hover:bg-[#044E39] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                            title="Start Google Maps turn-by-turn navigation directly to the customer doorstep"
+                          >
+                            <Navigation className="w-3.5 h-3.5 text-emerald-300" />
+                            <span>Navigate to Doorstep (Google Maps)</span>
+                            <ExternalLink className="w-3 h-3 text-emerald-200" />
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={() => handleMaskedCall(delivery.patientPhone)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold shadow-xs self-start sm:self-auto cursor-pointer"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Call (Masked)</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* PHASE A: When still collecting (stepIndex 1) -> Customer OTP locked */}
