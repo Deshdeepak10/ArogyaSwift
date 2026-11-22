@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LovableHeader } from "@/components/LovableHeader";
 import { LovableFooter } from "@/components/LovableFooter";
+import { useAuth } from "@/contexts/AuthContext";
 import { useOrders } from "@/contexts/OrderContext";
 import { DEMO_RIDERS, DemoRider, getRiderById } from "@/lib/demoRiders";
 import {
@@ -28,6 +29,7 @@ const DELIVERY_STEPS = [
 ];
 
 export default function DeliveryPortal() {
+  const { user } = useAuth();
   const {
     orders,
     acceptDeliveryRun,
@@ -37,40 +39,52 @@ export default function DeliveryPortal() {
     verifyDeliveryOtp
   } = useOrders();
 
-  const [selectedRiderId, setSelectedRiderId] = useState<string>("all");
-  const currentRider = DEMO_RIDERS.find((r) => r.id === selectedRiderId);
+  const isCourier = user.role === "rider";
+  const [selectedRiderId, setSelectedRiderId] = useState<string>(() =>
+    isCourier ? (user.id !== "u-rider-default" ? user.id : "rider-ravi") : "all"
+  );
+  const activeRiderId = isCourier ? (user.id !== "u-rider-default" ? user.id : "rider-ravi") : selectedRiderId;
+  const currentRider =
+    DEMO_RIDERS.find((r) => r.id === activeRiderId) || (isCourier ? DEMO_RIDERS[0] : undefined);
 
   const [enteredOtp, setEnteredOtp] = useState<Record<string, string>>({});
   const [pickupOtpInputs, setPickupOtpInputs] = useState<Record<string, string>>({});
 
-  // 1. Pending dispatch requests waiting for rider to accept (Connected to Pharmacy dispatch)
+  // 1. Pending dispatch requests waiting for rider to accept (Strictly isolated)
   const pendingRequests = orders.filter((o) => {
     if (o.status !== "rider_assigned") return false;
-    if (selectedRiderId === "all") return true;
-    if (o.riderId === selectedRiderId) return true;
+    // Admins can inspect all pending dispatches
+    if (user.role === "admin" && selectedRiderId === "all") return true;
+
+    // Directly assigned to this rider
+    if (o.riderId === activeRiderId) return true;
     if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
-    // Shared fleet riders can also claim broadcast unassigned shared runs
-    if (currentRider?.type === "shared" && o.riderType === "Shared Partner Fleet") return true;
+
+    // Shared fleet riders can only view broadcast unassigned shared runs
+    if (currentRider?.type === "shared" && o.riderType === "Shared Partner Fleet" && !o.riderId) return true;
     return false;
   });
 
-  // 2. Active deliveries currently being handled by rider
+  // 2. Active deliveries currently being handled by rider (Zero cross-rider leakage)
   const activeDeliveries = orders.filter((o) => {
     const isActive =
       o.status === "collecting" ||
       o.status === "picked_up" ||
       o.status === "out_for_delivery";
     if (!isActive) return false;
-    if (selectedRiderId === "all") return true;
-    if (o.riderId === selectedRiderId) return true;
+    if (user.role === "admin" && selectedRiderId === "all") return true;
+
+    if (o.riderId === activeRiderId) return true;
     if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
     return false;
   });
 
+  // 3. Completed deliveries
   const completedDeliveries = orders.filter((o) => {
     if (o.status !== "delivered") return false;
-    if (selectedRiderId === "all") return true;
-    if (o.riderId === selectedRiderId) return true;
+    if (user.role === "admin" && selectedRiderId === "all") return true;
+
+    if (o.riderId === activeRiderId) return true;
     if (o.riderName && currentRider && o.riderName.toLowerCase().includes(currentRider.name.toLowerCase())) return true;
     return false;
   });
@@ -208,7 +222,13 @@ export default function DeliveryPortal() {
               </div>
             </div>
 
-            {/* Quick Rider Switcher Pills */}
+            {/* Quick Rider Switcher (Couriers locked to own assigned queue; Admins have fleet view) */}
+            {isCourier && user.role !== "admin" ? (
+              <div className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-900 shadow-xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>🔒 Courier Verified: <strong>{user.name || currentRider?.name || "Active Courier"}</strong> (Showing only parcels assigned to you)</span>
+              </div>
+            ) : (
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               <button
                 type="button"
@@ -257,6 +277,7 @@ export default function DeliveryPortal() {
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Quick Shift Counters */}

@@ -56,6 +56,51 @@ export default function CustomerPortal() {
   const [activeTab, setActiveTab] = useState<"new_request" | "my_orders">("new_request");
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<Record<string, "ONLINE" | "COD">>({});
 
+  // Session-isolated order tracking for active patient session
+  const [sessionOrderIds, setSessionOrderIds] = useState<string[]>(() => {
+    try {
+      const stored = sessionStorage.getItem("arogya_patient_session_orders");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const recordSessionOrder = (id: string) => {
+    setSessionOrderIds((prev) => {
+      const updated = [id, ...prev];
+      try {
+        sessionStorage.setItem("arogya_patient_session_orders", JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
+
+  // Strictly isolate orders: Patients NEVER see other patients' orders
+  const myOrders = orders.filter((order) => {
+    // 1. Order created during current active browser session
+    if (sessionOrderIds.includes(order.id)) return true;
+
+    // 2. Direct authenticated user ID match
+    if (user.id && user.id !== "guest" && order.userId === user.id) return true;
+
+    // 3. User phone match (handles formatting and country code)
+    const cleanUserPhone = (user.phone || mobile || "").replace(/\D/g, "");
+    const cleanOrderPhone = (order.patientPhone || "").replace(/\D/g, "");
+    if (cleanUserPhone.length >= 10 && cleanOrderPhone.length >= 10) {
+      if (cleanUserPhone.slice(-10) === cleanOrderPhone.slice(-10)) return true;
+    }
+
+    // 4. User email match
+    if (user.email && order.patientEmail && user.email.toLowerCase() === order.patientEmail.toLowerCase()) {
+      return true;
+    }
+
+    return false;
+  });
+
   // Form State: clean real user inputs (zero fake preset data)
   const [fullName, setFullName] = useState(user?.name && user.id !== "guest" ? user.name : "");
   const [mobile, setMobile] = useState(() => (user?.phone && user.id !== "guest" ? user.phone : ""));
@@ -477,8 +522,11 @@ export default function CustomerPortal() {
         area: effectiveArea,
         isUrgent,
         prescriptionFile: prescriptionPreviewUrl || prescriptionFile,
-        medicines: medicines.filter((m) => m.name.trim().length > 0)
+        medicines: medicines.filter((m) => m.name.trim().length > 0),
+        userId: user.id !== "guest" ? user.id : undefined,
+        userEmail: user.email || undefined,
       });
+      recordSessionOrder(newOrderId);
 
       trackEvent("order_requested", {
         orderId: newOrderId,
@@ -540,7 +588,7 @@ export default function CustomerPortal() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              My orders ({orders.length})
+              My orders ({myOrders.length})
             </button>
           </div>
         </div>
@@ -1091,10 +1139,29 @@ export default function CustomerPortal() {
             </div>
           </div>
         ) : (
-          /* My Orders View (Live updating from OrderContext) */
+          /* My Orders View (Strictly filtered per patient session) */
           <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {orders.map((order) => (
+            {myOrders.length === 0 ? (
+              <div className="bg-white rounded-xl border border-slate-200/90 p-12 text-center space-y-4">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                  <FileText className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">No Orders Placed Yet</h3>
+                  <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                    You have not submitted any medicine requests under this account yet. Requests you submit will appear here with live verification and rider dispatch updates.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab("new_request")}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Create New Medicine Request
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {myOrders.map((order) => (
                 <div
                   key={order.id}
                   className="bg-white rounded-xl border border-slate-200/90 p-6 shadow-xs space-y-5"
@@ -1350,6 +1417,7 @@ export default function CustomerPortal() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 

@@ -18,6 +18,7 @@ import { DeliveryAuthModal } from "./components/auth/DeliveryAuthModal";
 import { AdminAuthModal } from "./components/auth/AdminAuthModal";
 
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import CustomerPortal from "./pages/CustomerPortal";
 import PharmacyPortal from "./pages/PharmacyPortal";
 import DeliveryPortal from "./pages/DeliveryPortal";
@@ -32,11 +33,21 @@ function Router() {
     <Switch>
       <Route path="/" component={LoginHome} />
       <Route path="/login" component={LoginHome} />
-      <Route path="/patient" component={CustomerPortal} />
-      <Route path="/customer" component={CustomerPortal} />
-      <Route path="/pharmacy" component={PharmacyPortal} />
-      <Route path="/delivery" component={DeliveryPortal} />
-      <Route path="/admin" component={AdminPortal} />
+      <Route path="/patient">
+        {() => <ProtectedRoute component={CustomerPortal} allowedRoles={["customer", "patient"]} />}
+      </Route>
+      <Route path="/customer">
+        {() => <ProtectedRoute component={CustomerPortal} allowedRoles={["customer", "patient"]} />}
+      </Route>
+      <Route path="/pharmacy">
+        {() => <ProtectedRoute component={PharmacyPortal} allowedRoles={["pharmacy", "admin"]} />}
+      </Route>
+      <Route path="/delivery">
+        {() => <ProtectedRoute component={DeliveryPortal} allowedRoles={["rider", "admin"]} />}
+      </Route>
+      <Route path="/admin">
+        {() => <ProtectedRoute component={AdminPortal} allowedRoles={["admin"]} />}
+      </Route>
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsConditions} />
       <Route path="/app" component={MedicineMVP} />

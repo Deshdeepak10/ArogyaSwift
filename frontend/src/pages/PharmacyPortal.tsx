@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LovableHeader } from "@/components/LovableHeader";
 import { LovableFooter } from "@/components/LovableFooter";
+import { useAuth } from "@/contexts/AuthContext";
 import { useOrders, OrderItem } from "@/contexts/OrderContext";
 import { DEMO_RIDERS, DemoRider } from "@/lib/demoRiders";
 import {
@@ -19,6 +20,7 @@ import {
 import { toast } from "sonner";
 
 export default function PharmacyPortal() {
+  const { user } = useAuth();
   const {
     orders,
     approvePharmacyQuote,
@@ -26,7 +28,11 @@ export default function PharmacyPortal() {
     assignRider
   } = useOrders();
 
-  const [selectedPharmacy, setSelectedPharmacy] = useState("Shree Ganesh Medicals");
+  const [selectedPharmacy, setSelectedPharmacy] = useState(() =>
+    user.role === "pharmacy" && user.shopName ? user.shopName : "Shree Ganesh Medicals"
+  );
+  const activePharmacyName =
+    user.role === "pharmacy" && user.shopName ? user.shopName : selectedPharmacy;
   const [isOpen, setIsOpen] = useState(true);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [modalPrescriptionOrder, setModalPrescriptionOrder] = useState<string>("AS-1044");
@@ -39,15 +45,31 @@ export default function PharmacyPortal() {
   const sharedPartners = DEMO_RIDERS.filter((r) => r.type === "shared");
   const [selectedSharedPartnerId, setSelectedSharedPartnerId] = useState<string>("rider-ravi");
 
-  // Filter orders for Pharmacy views
-  const incomingRequests = orders.filter((o) => o.status === "in_review");
+  // Strict Multi-Tenant Pharmacy Isolation:
+  // A pharmacy only sees orders broadcast to or accepted by this specific pharmacy.
+  const isOrderAssignedToPharmacy = (o: any) => {
+    if (user.role === "admin") return true; // Platform operations oversight
+    const targetPharmacies = (o.pharmacies || []).map((p: string) => p.toLowerCase());
+    const shopLower = activePharmacyName.toLowerCase();
+    const targeted = targetPharmacies.some((p: string) => p.includes(shopLower) || shopLower.includes(p));
+    const pickupStopMatches = (o.pickupStops || []).some((s: any) =>
+      s.pharmacyName.toLowerCase().includes(shopLower) || shopLower.includes(s.pharmacyName.toLowerCase())
+    );
+    return targeted || pickupStopMatches;
+  };
+
+  // Filter orders strictly for current authenticated pharmacy
+  const incomingRequests = orders.filter(
+    (o) => o.status === "in_review" && isOrderAssignedToPharmacy(o)
+  );
   const acceptedOrders = orders.filter(
     (o) =>
-      o.status === "quoted" ||
-      o.status === "order_confirmed" ||
-      o.status === "rider_assigned" ||
-      o.status === "collecting" ||
-      o.status === "picked_up"
+      (o.status === "quoted" ||
+        o.status === "order_confirmed" ||
+        o.status === "rider_assigned" ||
+        o.status === "collecting" ||
+        o.status === "picked_up") &&
+      isOrderAssignedToPharmacy(o)
   );
 
   const getEditableItems = (orderId: string, originalItems: OrderItem[]) => {

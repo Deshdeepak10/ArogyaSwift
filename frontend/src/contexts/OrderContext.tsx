@@ -35,6 +35,8 @@ export interface PlatformOrder {
   createdAt: string;
   patientName: string;
   patientPhone: string;
+  userId?: string;
+  patientEmail?: string;
   address: string;
   area: string;
   isUrgent: boolean;
@@ -70,6 +72,8 @@ interface OrderContextType {
     isUrgent: boolean;
     prescriptionFile: string | null;
     medicines: { id: string; name: string; quantity: string }[];
+    userId?: string;
+    userEmail?: string;
   }) => string;
   approvePharmacyQuote: (orderId: string, items: OrderItem[], total: number) => void;
   confirmPatientOrder: (orderId: string, paymentMethod?: "ONLINE" | "COD") => void;
@@ -179,7 +183,9 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     area,
     isUrgent,
     prescriptionFile,
-    medicines
+    medicines,
+    userId,
+    userEmail
   }: {
     fullName: string;
     mobile: string;
@@ -188,6 +194,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
     isUrgent: boolean;
     prescriptionFile: string | null;
     medicines: { id: string; name: string; quantity: string }[];
+    userId?: string;
+    userEmail?: string;
   }) => {
     const newId = `AS-${Math.floor(1045 + Math.random() * 8000)}`;
     // Strictly 4-digit customer delivery OTP (1000 - 9999)
@@ -210,6 +218,8 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       createdAt: "Just now",
       patientName: fullName,
       patientPhone: mobile.startsWith("+") ? mobile : `+91 ${mobile}`,
+      userId: userId || undefined,
+      patientEmail: userEmail || undefined,
       address,
       area: area || "Global Zone",
       isUrgent,
