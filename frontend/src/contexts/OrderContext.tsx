@@ -43,6 +43,7 @@ export interface PlatformOrder {
   prescriptionUrl?: string;
   items: OrderItem[];
   pharmacies: string[];
+  acceptedPharmacyName?: string;
   subtotal?: number;
   deliveryFee?: number;
   platformFee?: number;
@@ -75,7 +76,7 @@ interface OrderContextType {
     userId?: string;
     userEmail?: string;
   }) => string;
-  approvePharmacyQuote: (orderId: string, items: OrderItem[], total: number) => void;
+  approvePharmacyQuote: (orderId: string, items: OrderItem[], total: number, pharmacyName?: string) => void;
   confirmPatientOrder: (orderId: string, paymentMethod?: "ONLINE" | "COD") => void;
   declinePatientQuote: (orderId: string, reason?: string) => void;
   rejectPharmacyRequest: (orderId: string) => void;
@@ -227,7 +228,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
       items: formattedItems.length > 0 ? formattedItems : [
         { id: "item-1", name: "Prescription items (under verification)", quantity: "As per Rx", inStock: true, price: 0 }
       ],
-      pharmacies: ["Shree Ganesh Medicals (0.8km away)"],
+      pharmacies: ["Shree Ganesh Medicals", "Apollo Pharmacy Indiranagar", "MedPlus Superstore", "Local Chemist Network"],
       totalAmount: 0,
       otp: randomCustomerOtp,
       pickupOtp: randomPickupOtp,
@@ -272,7 +273,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
   };
 
   // 2. Pharmacy Approves Prescription & Sends Price
-  const approvePharmacyQuote = (orderId: string, updatedItems: OrderItem[], total: number) => {
+  const approvePharmacyQuote = (orderId: string, updatedItems: OrderItem[], total: number, pharmacyName?: string) => {
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id === orderId) {
@@ -296,6 +297,7 @@ export function OrderProvider({ children }: { children: React.ReactNode }) {
             totalAmount: finalAmount,
             pickupOtp: assignedPickupOtp,
             pickupStops: updatedStops,
+            acceptedPharmacyName: pharmacyName || order.acceptedPharmacyName || "Shree Ganesh Medicals",
             status: "quoted",
             statusLabel: `Price Quoted ₹${finalAmount} · Awaiting Patient Confirmation`
           };

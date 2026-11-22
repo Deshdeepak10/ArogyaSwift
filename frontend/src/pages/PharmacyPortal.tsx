@@ -31,8 +31,7 @@ export default function PharmacyPortal() {
   const [selectedPharmacy, setSelectedPharmacy] = useState(() =>
     user.role === "pharmacy" && user.shopName ? user.shopName : "Shree Ganesh Medicals"
   );
-  const activePharmacyName =
-    user.role === "pharmacy" && user.shopName ? user.shopName : selectedPharmacy;
+  const activePharmacyName = selectedPharmacy;
   const [isOpen, setIsOpen] = useState(true);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [modalPrescriptionOrder, setModalPrescriptionOrder] = useState<string>("AS-1044");
@@ -45,17 +44,24 @@ export default function PharmacyPortal() {
   const sharedPartners = DEMO_RIDERS.filter((r) => r.type === "shared");
   const [selectedSharedPartnerId, setSelectedSharedPartnerId] = useState<string>("rider-ravi");
 
-  // Strict Multi-Tenant Pharmacy Isolation:
-  // A pharmacy only sees orders broadcast to or accepted by this specific pharmacy.
+  // Multi-Tenant Pharmacy Isolation:
+  // 1. All incoming patient prescription requests (status: "in_review") are broadcast to local chemists so they can check stock and quote prices.
+  // 2. Once accepted/quoted, orders are strictly routed to the fulfilling pharmacy.
   const isOrderAssignedToPharmacy = (o: any) => {
     if (user.role === "admin") return true; // Platform operations oversight
-    const targetPharmacies = (o.pharmacies || []).map((p: string) => p.toLowerCase());
+
+    // 1. Any incoming patient request waiting for review is broadcast to local chemists
+    if (o.status === "in_review") return true;
+
+    // 2. For accepted/quoted/in-flight orders: match against this specific chemist
     const shopLower = activePharmacyName.toLowerCase();
+    const isQuotedByThisShop = o.acceptedPharmacyName && o.acceptedPharmacyName.toLowerCase().includes(shopLower);
+    const targetPharmacies = (o.pharmacies || []).map((p: string) => p.toLowerCase());
     const targeted = targetPharmacies.some((p: string) => p.includes(shopLower) || shopLower.includes(p));
     const pickupStopMatches = (o.pickupStops || []).some((s: any) =>
       s.pharmacyName.toLowerCase().includes(shopLower) || shopLower.includes(s.pharmacyName.toLowerCase())
     );
-    return targeted || pickupStopMatches;
+    return isQuotedByThisShop || targeted || pickupStopMatches;
   };
 
   // Filter orders strictly for current authenticated pharmacy
@@ -117,7 +123,7 @@ export default function PharmacyPortal() {
       .filter((i) => i.inStock)
       .reduce((sum, i) => sum + i.price, 0);
 
-    approvePharmacyQuote(orderId, updatedItems, total);
+    approvePharmacyQuote(orderId, updatedItems, total, activePharmacyName);
     toast.success(`Quote of ₹${total + 30} approved and sent to patient for ${orderId}!`);
   };
 

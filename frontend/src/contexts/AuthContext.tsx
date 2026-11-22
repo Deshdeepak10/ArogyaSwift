@@ -68,15 +68,15 @@ export const PRESET_USERS: Record<UserRole, UserSession> = {
   patient: GUEST_USER,
   pharmacy: {
     id: "u-pharmacy-default",
-    name: "Local Chemist Partner",
+    name: "Shree Ganesh Medicals",
     role: "pharmacy",
     email: "partner@arogyaswift.in",
-    phone: "",
+    phone: "+91 98110 23456",
     badge: "Licensed Pharmacy",
     avatar: "🏥",
-    licenseNo: "",
-    shopName: "Local Pharmacy",
-    location: ""
+    licenseNo: "KA-BLR-20B-1142",
+    shopName: "Shree Ganesh Medicals",
+    location: "12th Main Rd, Indiranagar, Bengaluru"
   },
   rider: {
     id: "u-rider-default",
